@@ -1,12 +1,12 @@
 import { makeTitle, buildBriefing } from "../utils/shared.js";
 
 const PLATFORM_MAP = {
-  "claude.ai": "Claude",
-  "chatgpt.com": "ChatGPT",
-  "chat.openai.com": "ChatGPT",
-  "gemini.google.com": "Gemini",
-  "perplexity.ai": "Perplexity",
-  "grok.com": "Grok",
+  "claude.ai":           "Claude",
+  "chatgpt.com":         "ChatGPT",
+  "chat.openai.com":     "ChatGPT",
+  "gemini.google.com":   "Gemini",
+  "perplexity.ai":       "Perplexity",
+  "grok.com":            "Grok",
 };
 
 function getPlatform() {
@@ -17,7 +17,66 @@ function getPlatform() {
   return null;
 }
 
-// ── Extraction ────────────────────────────────────────────────────────────────
+// ── Sidebar scraping ───────────────────────────────────────────────────────────
+
+function getRecentConversations() {
+  const host = window.location.hostname;
+  const raw = [];
+
+  if (host.includes("claude.ai")) {
+    // Main nav sidebar: links to /chat/uuid
+    document.querySelectorAll('nav a[href*="/chat/"]').forEach((a) => {
+      const title = a.innerText.trim();
+      if (title && a.href) raw.push({ title, url: a.href });
+    });
+
+  } else if (host.includes("chatgpt.com") || host.includes("openai.com")) {
+    // Sidebar conversation list: links /c/uuid
+    document.querySelectorAll('nav a[href^="/c/"], nav ol li a').forEach((a) => {
+      const title = a.innerText.trim();
+      if (title && a.href) raw.push({ title, url: a.href });
+    });
+
+  } else if (host.includes("gemini.google.com")) {
+    // Recent chats in the left rail
+    document.querySelectorAll(
+      'a[href*="/app/"], .conversation-list-item a, [data-conversation-id]'
+    ).forEach((el) => {
+      const a = el.tagName === "A" ? el : el.querySelector("a");
+      if (!a) return;
+      const title = a.innerText.trim() || el.innerText.trim();
+      if (title) raw.push({ title, url: a.href || "" });
+    });
+
+  } else if (host.includes("perplexity.ai")) {
+    // Threads in the left sidebar
+    document.querySelectorAll(
+      'a[href^="/search/"], a[href^="/thread/"]'
+    ).forEach((a) => {
+      const title = a.innerText.trim();
+      if (title) raw.push({ title, url: a.href });
+    });
+
+  } else if (host.includes("grok.com")) {
+    document.querySelectorAll('a[href*="/conversation/"]').forEach((a) => {
+      const title = a.innerText.trim();
+      if (title) raw.push({ title, url: a.href });
+    });
+  }
+
+  // Deduplicate by URL, skip current page, return first 5
+  const current = location.href;
+  const seen = new Set();
+  return raw
+    .filter((c) => {
+      if (!c.title || c.url === current || seen.has(c.url)) return false;
+      seen.add(c.url);
+      return true;
+    })
+    .slice(0, 5);
+}
+
+// ── Conversation extraction ───────────────────────────────────────────────────
 
 function extractConversation() {
   const host = window.location.hostname;
@@ -49,8 +108,6 @@ function extractConversation() {
     });
 
   } else if (host.includes("gemini.google.com")) {
-    // Collect both roles with their DOM nodes, then sort by position so the
-    // conversation order is preserved instead of all-user then all-assistant.
     const items = [];
     document
       .querySelectorAll(".query-text, .user-query-bubble .query-text-container")
@@ -68,7 +125,6 @@ function extractConversation() {
       });
 
   } else if (host.includes("perplexity.ai")) {
-    // .prose is too broad (matches nav, tooltips, etc.) — use specific testids only
     const pItems = [];
     document.querySelectorAll("[data-testid='user-message']").forEach((el) =>
       pItems.push({ el, role: "user" })
@@ -88,14 +144,10 @@ function extractConversation() {
   } else if (host.includes("grok.com")) {
     document
       .querySelectorAll("[class*='UserMessage'], [class*='user-message']")
-      .forEach((el) => {
-        messages.push({ role: "user", content: el.innerText.trim() });
-      });
+      .forEach((el) => messages.push({ role: "user", content: el.innerText.trim() }));
     document
       .querySelectorAll("[class*='AssistantMessage'], [class*='BotMessage']")
-      .forEach((el) => {
-        messages.push({ role: "assistant", content: el.innerText.trim() });
-      });
+      .forEach((el) => messages.push({ role: "assistant", content: el.innerText.trim() }));
   }
 
   return messages.filter((m) => m.content.length > 0);
@@ -156,18 +208,135 @@ function injectIntoInput(text) {
   return true;
 }
 
+// ── Floating picker banner ────────────────────────────────────────────────────
+// Shown on new (empty) chats when the toggle is ON.
+
+let bannerMounted = false;
+
+const BANNER_STYLES = `
+  position:fixed;bottom:24px;right:22px;z-index:2147483647;
+  background:#0f0f0f;color:#e8e8e8;
+  border:1px solid #272727;border-radius:14px;
+  padding:16px;font-family:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",sans-serif;
+  font-size:13px;box-shadow:0 16px 48px rgba(0,0,0,.7),0 4px 16px rgba(0,0,0,.4);
+  width:296px;display:flex;flex-direction:column;gap:10px;
+`;
+
+const ITEM_BASE = `
+  background:#161616;border:1px solid #222;border-radius:9px;
+  color:#ccc;padding:9px 12px;cursor:pointer;text-align:left;
+  font-family:inherit;font-size:12px;font-weight:500;
+  display:flex;align-items:center;gap:10px;width:100%;
+  transition:background 0.12s,border-color 0.12s,transform 0.1s;
+`;
+
+function mountPickerBanner(convs) {
+  if (bannerMounted || document.getElementById("llm-picker-banner")) return;
+  bannerMounted = true;
+
+  const platform = getPlatform();
+
+  const wrap = document.createElement("div");
+  wrap.id = "llm-picker-banner";
+  wrap.style.cssText = BANNER_STYLES;
+
+  // Header
+  const hdr = document.createElement("div");
+  hdr.style.cssText = "display:flex;justify-content:space-between;align-items:center;";
+  hdr.innerHTML = `
+    <div>
+      <div style="font-weight:700;font-size:13.5px;color:#fff;margin-bottom:1px;">Pick up where you left off</div>
+      <div style="font-size:11px;color:#555;">Recent on ${platform}</div>
+    </div>
+    <button data-action="close" style="background:#1a1a1a;border:1px solid #2a2a2a;color:#666;cursor:pointer;font-size:16px;line-height:1;padding:4px 8px;border-radius:6px;transition:all 0.12s;">×</button>
+  `;
+  wrap.appendChild(hdr);
+
+  // Conversation list
+  const list = document.createElement("div");
+  list.style.cssText = "display:flex;flex-direction:column;gap:4px;";
+
+  if (!convs.length) {
+    const empty = document.createElement("div");
+    empty.style.cssText = "color:#444;font-size:12px;padding:8px 0;text-align:center;";
+    empty.textContent = "No recent conversations found in sidebar.";
+    list.appendChild(empty);
+  } else {
+    convs.forEach((conv, i) => {
+      const btn = document.createElement("button");
+      btn.style.cssText = ITEM_BASE;
+      btn.innerHTML = `
+        <span style="font-size:10px;font-weight:800;color:#333;width:14px;text-align:center;flex-shrink:0;">${i + 1}</span>
+        <span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${conv.title}</span>
+        <span style="font-size:11px;color:#333;flex-shrink:0;">→</span>
+      `;
+      btn.addEventListener("mouseenter", () => {
+        btn.style.background = "#1e1e1e";
+        btn.style.borderColor = "#3a3a3a";
+        btn.style.transform = "translateX(2px)";
+      });
+      btn.addEventListener("mouseleave", () => {
+        btn.style.background = "#161616";
+        btn.style.borderColor = "#222";
+        btn.style.transform = "translateX(0)";
+      });
+      btn.addEventListener("click", () => {
+        wrap.remove();
+        if (conv.url) window.location.href = conv.url;
+      });
+      list.appendChild(btn);
+    });
+  }
+  wrap.appendChild(list);
+
+  // Random button (only if there are convs)
+  if (convs.length > 1) {
+    const randomBtn = document.createElement("button");
+    randomBtn.style.cssText = `
+      background:none;border:1px solid #222;color:#555;border-radius:7px;
+      padding:7px;font-size:12px;font-weight:600;cursor:pointer;
+      font-family:inherit;transition:all 0.12s;
+    `;
+    randomBtn.textContent = "↻  Pick random";
+    randomBtn.addEventListener("mouseenter", () => {
+      randomBtn.style.borderColor = "#fff";
+      randomBtn.style.color = "#fff";
+    });
+    randomBtn.addEventListener("mouseleave", () => {
+      randomBtn.style.borderColor = "#222";
+      randomBtn.style.color = "#555";
+    });
+    randomBtn.addEventListener("click", () => {
+      const pick = convs[Math.floor(Math.random() * convs.length)];
+      wrap.remove();
+      if (pick.url) window.location.href = pick.url;
+    });
+    wrap.appendChild(randomBtn);
+  }
+
+  wrap.addEventListener("click", (e) => {
+    if (e.target.closest("[data-action='close']")) wrap.remove();
+  });
+
+  // Animate in
+  wrap.style.opacity = "0";
+  wrap.style.transform = "translateY(12px)";
+  wrap.style.transition = "opacity 0.25s ease, transform 0.25s cubic-bezier(0.34,1.3,0.64,1)";
+  document.body.appendChild(wrap);
+  requestAnimationFrame(() => {
+    wrap.style.opacity = "1";
+    wrap.style.transform = "translateY(0)";
+  });
+}
+
 // ── SPA navigation ────────────────────────────────────────────────────────────
-// Claude, ChatGPT, Gemini are SPAs — URL changes don't reload the page.
-// We intercept history mutations and treat each URL change as a potential new chat.
 
 let currentUrl = location.href;
-let bannerMounted = false;
 
 function onUrlChange() {
   if (location.href === currentUrl) return;
   currentUrl = location.href;
   bannerMounted = false;
-  // Wait for the new page content to settle before checking
   waitForReadyThenBanner();
 }
 
@@ -177,125 +346,38 @@ history.pushState = (...args) => { _pushState(...args); onUrlChange(); };
 history.replaceState = (...args) => { _replaceState(...args); onUrlChange(); };
 window.addEventListener("popstate", onUrlChange);
 
-// ── Banner logic ──────────────────────────────────────────────────────────────
-// Uses a MutationObserver to wait until the page is confirmed empty (new chat)
-// rather than a fixed timeout — avoids showing the banner on existing conversations.
+// ── Banner trigger logic ──────────────────────────────────────────────────────
 
 function waitForReadyThenBanner() {
-  if (extractConversation().length > 0) return; // already has messages
+  if (extractConversation().length > 0) return; // existing conversation — skip
 
-  let resolved = false;
+  chrome.storage.local.get("llm_picker_enabled", ({ llm_picker_enabled: isOn }) => {
+    if (!isOn) return; // feature is toggled off
 
-  const done = (isNewChat) => {
-    if (resolved) return;
-    resolved = true;
-    observer.disconnect();
-    if (isNewChat) {
-      chrome.runtime.sendMessage({ type: "GET_MEMORIES" }, (res) => {
-        if (res?.success && res.data?.length > 0) mountBanner(res.data);
-      });
-    }
-  };
+    let resolved = false;
 
-  // If messages appear within 2s, this is not a new chat
-  const observer = new MutationObserver(() => {
-    if (extractConversation().length > 0) done(false);
-  });
-  observer.observe(document.body, { subtree: true, childList: true });
-  setTimeout(() => done(extractConversation().length === 0), 2000);
-}
+    const done = (isNewChat) => {
+      if (resolved) return;
+      resolved = true;
+      observer.disconnect();
+      if (!isNewChat) return;
 
-function mountBanner(memories) {
-  if (bannerMounted || document.getElementById("llm-memory-banner")) return;
-  bannerMounted = true;
-
-  const latest = memories[0];
-  const wrap = document.createElement("div");
-  wrap.id = "llm-memory-banner";
-  wrap.style.cssText = `
-    position:fixed;bottom:80px;right:20px;z-index:2147483647;
-    background:#16161e;color:#e0e0e0;border:1px solid #3a3a5c;
-    border-radius:14px;padding:14px 16px;font-family:system-ui,sans-serif;
-    font-size:13px;box-shadow:0 8px 32px rgba(0,0,0,.5);
-    width:284px;display:flex;flex-direction:column;gap:10px;
-  `;
-  wrap.innerHTML = `
-    <div style="display:flex;justify-content:space-between;align-items:center">
-      <span style="font-weight:700;font-size:14px">🧠 Memory available</span>
-      <button data-action="close" style="background:none;border:none;color:#777;cursor:pointer;font-size:18px;line-height:1;padding:0">×</button>
-    </div>
-    <div style="color:#9a9abc;font-size:12px;line-height:1.5">
-      <strong style="color:#c4b5fd">${latest.title}</strong><br>
-      ${latest.platform} · ${latest.timestamp} · ${latest.messages.length} msgs
-    </div>
-    <div style="display:flex;gap:8px">
-      <button data-action="inject" style="flex:1;background:#6d28d9;color:#fff;border:none;border-radius:8px;padding:7px 10px;cursor:pointer;font-size:12px;font-weight:600">Inject latest</button>
-      ${memories.length > 1
-        ? `<button data-action="pick" style="flex:1;background:#1e1e2e;color:#c4b5fd;border:1px solid #3f3f5a;border-radius:8px;padding:7px 10px;cursor:pointer;font-size:12px;font-weight:600">Pick (${memories.length})</button>`
-        : ""}
-    </div>
-  `;
-
-  wrap.addEventListener("click", (e) => {
-    const action = e.target.closest("[data-action]")?.dataset.action;
-    if (!action) return;
-    if (action === "close") { wrap.remove(); return; }
-    if (action === "inject") {
-      const briefing = buildBriefing(latest);
-      const ok = injectIntoInput(briefing);
-      wrap.remove();
-      if (!ok) navigator.clipboard.writeText(briefing);
-      chrome.runtime.sendMessage({ type: "BUMP_ANALYTIC", key: "injects" });
-    }
-    if (action === "pick") { wrap.remove(); mountPicker(memories); }
-  });
-
-  document.body.appendChild(wrap);
-}
-
-function mountPicker(memories) {
-  const wrap = document.createElement("div");
-  wrap.style.cssText = `
-    position:fixed;bottom:80px;right:20px;z-index:2147483647;
-    background:#16161e;color:#e0e0e0;border:1px solid #3a3a5c;
-    border-radius:14px;padding:14px 16px;font-family:system-ui,sans-serif;
-    font-size:13px;box-shadow:0 8px 32px rgba(0,0,0,.5);
-    width:300px;display:flex;flex-direction:column;gap:6px;
-    max-height:320px;overflow-y:auto;
-  `;
-  const hdr = document.createElement("div");
-  hdr.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin-bottom:4px";
-  hdr.innerHTML = `<span style="font-weight:700;font-size:14px">🧠 Pick memory</span>
-    <button style="background:none;border:none;color:#777;cursor:pointer;font-size:18px;line-height:1;padding:0">×</button>`;
-  hdr.querySelector("button").onclick = () => wrap.remove();
-  wrap.appendChild(hdr);
-
-  memories.forEach((mem) => {
-    const btn = document.createElement("button");
-    btn.style.cssText = `background:#1e1e2e;border:1px solid #3f3f5a;border-radius:10px;
-      color:#e0e0e0;padding:10px 12px;cursor:pointer;text-align:left;
-      font-size:12px;display:flex;flex-direction:column;gap:3px;width:100%;`;
-    btn.innerHTML = `<span style="font-weight:600;color:#f0f0f0">${mem.title}</span>
-      <span style="color:#888">${mem.platform} · ${mem.timestamp} · ${mem.messages.length} msgs</span>`;
-    btn.onmouseenter = () => (btn.style.background = "#2a2a3e");
-    btn.onmouseleave = () => (btn.style.background = "#1e1e2e");
-    btn.onclick = () => {
-      const briefing = buildBriefing(mem);
-      const ok = injectIntoInput(briefing);
-      wrap.remove();
-      if (!ok) navigator.clipboard.writeText(briefing);
-      chrome.runtime.sendMessage({ type: "BUMP_ANALYTIC", key: "injects" });
+      // Give sidebar a moment to load, then scrape
+      setTimeout(() => {
+        const convs = getRecentConversations();
+        mountPickerBanner(convs);
+      }, 800);
     };
-    wrap.appendChild(btn);
-  });
 
-  document.body.appendChild(wrap);
+    const observer = new MutationObserver(() => {
+      if (extractConversation().length > 0) done(false);
+    });
+    observer.observe(document.body, { subtree: true, childList: true });
+    setTimeout(() => done(extractConversation().length === 0), 2000);
+  });
 }
 
 // ── Auto-save ─────────────────────────────────────────────────────────────────
-// Every 30 s, if the page is visible and has a meaningful conversation with new
-// content since the last auto-save, upsert a background memory for this URL.
-// Uses AUTO_SAVE_MEMORY in the background so it's always one record per URL.
 
 let autoSaveCount = 0;
 let autoSaveUrl = "";
@@ -304,7 +386,7 @@ const autoSaveTimer = setInterval(() => {
   try {
     if (document.visibilityState !== "visible") return;
     const messages = extractConversation();
-    if (messages.length < 4) return; // need at least 2 full exchanges
+    if (messages.length < 4) return;
     if (location.href === autoSaveUrl && messages.length <= autoSaveCount) return;
     if (location.href === autoSaveUrl && messages.length - autoSaveCount < 2) return;
 
@@ -326,18 +408,13 @@ const autoSaveTimer = setInterval(() => {
     };
 
     chrome.runtime.sendMessage({ type: "AUTO_SAVE_MEMORY", payload }, (res) => {
-      if (chrome.runtime.lastError) {
-        // Extension context invalidated (e.g. after update) — stop the timer
-        clearInterval(autoSaveTimer);
-        return;
-      }
+      if (chrome.runtime.lastError) { clearInterval(autoSaveTimer); return; }
       if (res?.success) {
         autoSaveCount = messages.length;
         autoSaveUrl = location.href;
       }
     });
   } catch (_) {
-    // Extension context invalidated
     clearInterval(autoSaveTimer);
   }
 }, 30000);
@@ -345,7 +422,6 @@ const autoSaveTimer = setInterval(() => {
 // ── Init ──────────────────────────────────────────────────────────────────────
 
 if (getPlatform()) {
-  // On initial page load, run the same readiness check
   if (document.readyState === "complete") {
     waitForReadyThenBanner();
   } else {
@@ -356,6 +432,11 @@ if (getPlatform()) {
 // ── Message listener ──────────────────────────────────────────────────────────
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (message.type === "GET_RECENT_CONVERSATIONS") {
+    const conversations = getRecentConversations();
+    sendResponse({ success: true, conversations, platform: getPlatform() });
+    return true;
+  }
   if (message.type === "GET_CONVERSATION") {
     sendResponse({ success: true, messages: extractConversation(), platform: getPlatform() });
     return true;
