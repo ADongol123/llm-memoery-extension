@@ -1,0 +1,1 @@
+chrome.runtime.onMessage.addListener((e,m,o)=>"SAVE_MEMORY"===e.type?(chrome.storage.local.set({llm_memory:e.payload},()=>{o({success:!0})}),!0):"GET_MEMORY"===e.type?(chrome.storage.local.get("llm_memory",e=>{o({success:!0,data:e.llm_memory||null})}),!0):"CLEAR_MEMORY"===e.type?(chrome.storage.local.remove("llm_memory",()=>{o({success:!0})}),!0):void 0);
