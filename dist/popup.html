@@ -12,53 +12,53 @@
       <!-- Header -->
       <div class="header">
         <div class="header-left">
-          <span class="logo">🧠</span>
-          <div>
-            <div class="title">LLM Memory</div>
-            <div id="platformBadge" class="platform-badge hidden"></div>
+          <div class="logo-wrap">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <path d="M12 3C7 3 3 7 3 12s4 9 9 9 9-4 9-9-4-9-9-9z" stroke="#fff" stroke-width="1.5"/>
+              <path d="M12 8v4l3 3" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <span class="title">LLM Memory</span>
+        </div>
+        <label class="toggle" title="Enable conversation picker">
+          <input type="checkbox" id="toggleInput" />
+          <span class="toggle-track">
+            <span class="toggle-thumb"></span>
+          </span>
+        </label>
+      </div>
+
+      <!-- Status -->
+      <div class="status-row">
+        <span id="statusDot" class="dot dot-off"></span>
+        <span id="statusText" class="status-text">Picker is off</span>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Recent conversations section (shown when on an LLM tab) -->
+      <div id="recentSection" class="hidden">
+        <div class="section-header">
+          <span id="platformLabel" class="section-label">Recent conversations</span>
+          <button id="randomBtn" class="btn-ghost">↻ Random</button>
+        </div>
+        <div id="convList" class="conv-list"></div>
+        <div id="loadingState" class="loading-state hidden">
+          <div class="loading-dots">
+            <span></span><span></span><span></span>
           </div>
         </div>
-        <div class="header-actions">
-          <button id="exportBtn" class="btn-icon" title="Export memories (JSON)">⬇</button>
-          <label class="btn-icon" title="Import memories (JSON)" style="cursor:pointer;display:inline-flex;align-items:center;">
-            ⬆<input type="file" id="importInput" accept=".json" style="display:none" />
-          </label>
+      </div>
+
+      <!-- Idle / off state -->
+      <div id="idleState" class="idle-state">
+        <div class="idle-desc">
+          Toggle on, then open any AI chat — the last 5 conversations will appear here so you can pick up where you left off.
         </div>
       </div>
 
-      <!-- Search -->
-      <div class="search-wrap">
-        <span class="search-icon">🔍</span>
-        <input id="searchInput" class="search-input" placeholder="Search memories…" type="text" autocomplete="off" />
-      </div>
-
-      <!-- Workspace filter -->
-      <div id="workspaceTabs" class="workspace-tabs"></div>
-
-      <!-- Status toast -->
-      <div id="status" class="status hidden"></div>
-
-      <!-- Pro upgrade banner -->
-      <div id="upgradeBanner" class="upgrade-banner hidden">
-        <span>Free limit reached (5 memories).</span>
-        <a href="https://llmmemory.app/pro" target="_blank" class="upgrade-link">Upgrade to Pro →</a>
-      </div>
-
-      <!-- Memory list -->
-      <div id="memoryList" class="memory-list"></div>
-
-      <!-- Empty state -->
-      <div id="emptyState" class="empty-state hidden">
-        <div class="empty-icon">💬</div>
-        <div class="empty-text">No memories yet</div>
-        <div class="empty-sub">Open an AI chat and press <kbd>⌘⇧S</kbd> or click Save.</div>
-      </div>
-
-      <!-- Footer -->
-      <div class="footer">
-        <button id="saveBtn" class="btn btn-primary">+ Save current</button>
-        <div id="analytics" class="analytics"></div>
-      </div>
+      <!-- Toast -->
+      <div id="toast" class="toast hidden"></div>
 
     </div>
     <script src="popup.js"></script>
