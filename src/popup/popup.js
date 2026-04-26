@@ -32,10 +32,17 @@ const upgradeBanner  = $("upgradeBanner");
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function showStatus(msg, type = "success") {
-  statusEl.textContent = msg;
+  clearTimeout(showStatus._timer);
   statusEl.className = `status ${type}`;
+  statusEl.textContent = msg;
   statusEl.classList.remove("hidden");
-  setTimeout(() => statusEl.classList.add("hidden"), 3500);
+  showStatus._timer = setTimeout(() => {
+    statusEl.classList.add("hiding");
+    setTimeout(() => {
+      statusEl.classList.add("hidden");
+      statusEl.classList.remove("hiding");
+    }, 180);
+  }, 3000);
 }
 
 function sendMsg(type, payload = {}) {

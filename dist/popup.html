@@ -20,7 +20,7 @@
         </div>
         <div class="header-actions">
           <button id="exportBtn" class="btn-icon" title="Export memories (JSON)">⬇</button>
-          <label class="btn-icon" title="Import memories (JSON)">
+          <label class="btn-icon" title="Import memories (JSON)" style="cursor:pointer;display:inline-flex;align-items:center;">
             ⬆<input type="file" id="importInput" accept=".json" style="display:none" />
           </label>
         </div>
@@ -29,16 +29,16 @@
       <!-- Search -->
       <div class="search-wrap">
         <span class="search-icon">🔍</span>
-        <input id="searchInput" class="search-input" placeholder="Search memories…" type="text" />
+        <input id="searchInput" class="search-input" placeholder="Search memories…" type="text" autocomplete="off" />
       </div>
 
       <!-- Workspace filter -->
       <div id="workspaceTabs" class="workspace-tabs"></div>
 
-      <!-- Status -->
+      <!-- Status toast -->
       <div id="status" class="status hidden"></div>
 
-      <!-- Pro upgrade banner (hidden by default) -->
+      <!-- Pro upgrade banner -->
       <div id="upgradeBanner" class="upgrade-banner hidden">
         <span>Free limit reached (5 memories).</span>
         <a href="https://llmmemory.app/pro" target="_blank" class="upgrade-link">Upgrade to Pro →</a>
@@ -50,7 +50,7 @@
       <!-- Empty state -->
       <div id="emptyState" class="empty-state hidden">
         <div class="empty-icon">💬</div>
-        <div class="empty-text">No memories found.</div>
+        <div class="empty-text">No memories yet</div>
         <div class="empty-sub">Open an AI chat and press <kbd>⌘⇧S</kbd> or click Save.</div>
       </div>
 
