@@ -1,0 +1,995 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		85028F252F9E5B6A000BE70D /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85028F242F9E5B6A000BE70D /* AppDelegate.swift */; };
+		85028F272F9E5B6A000BE70D /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85028F262F9E5B6A000BE70D /* SceneDelegate.swift */; };
+		85028F2A2F9E5B6A000BE70D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 85028F282F9E5B6A000BE70D /* LaunchScreen.storyboard */; };
+		85028F2D2F9E5B6A000BE70D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 85028F2B2F9E5B6A000BE70D /* Main.storyboard */; };
+		85028F362F9E5B6A000BE70D /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85028F352F9E5B6A000BE70D /* AppDelegate.swift */; };
+		85028F392F9E5B6A000BE70D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 85028F372F9E5B6A000BE70D /* Main.storyboard */; };
+		85028F402F9E5B6A000BE70D /* LLMMemory Extension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 85028F3F2F9E5B6A000BE70D /* LLMMemory Extension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		85028F4A2F9E5B6A000BE70D /* LLMMemory Extension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 85028F492F9E5B6A000BE70D /* LLMMemory Extension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		85028F4F2F9E5B6A000BE70D /* Main.html in Resources */ = {isa = PBXBuildFile; fileRef = 85028F142F9E5B68000BE70D /* Main.html */; };
+		85028F502F9E5B6A000BE70D /* Main.html in Resources */ = {isa = PBXBuildFile; fileRef = 85028F142F9E5B68000BE70D /* Main.html */; };
+		85028F512F9E5B6A000BE70D /* Icon.png in Resources */ = {isa = PBXBuildFile; fileRef = 85028F162F9E5B68000BE70D /* Icon.png */; };
+		85028F522F9E5B6A000BE70D /* Icon.png in Resources */ = {isa = PBXBuildFile; fileRef = 85028F162F9E5B68000BE70D /* Icon.png */; };
+		85028F532F9E5B6A000BE70D /* Style.css in Resources */ = {isa = PBXBuildFile; fileRef = 85028F172F9E5B68000BE70D /* Style.css */; };
+		85028F542F9E5B6A000BE70D /* Style.css in Resources */ = {isa = PBXBuildFile; fileRef = 85028F172F9E5B68000BE70D /* Style.css */; };
+		85028F552F9E5B6A000BE70D /* Script.js in Resources */ = {isa = PBXBuildFile; fileRef = 85028F182F9E5B68000BE70D /* Script.js */; };
+		85028F562F9E5B6A000BE70D /* Script.js in Resources */ = {isa = PBXBuildFile; fileRef = 85028F182F9E5B68000BE70D /* Script.js */; };
+		85028F572F9E5B6A000BE70D /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85028F192F9E5B68000BE70D /* ViewController.swift */; };
+		85028F582F9E5B6A000BE70D /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85028F192F9E5B68000BE70D /* ViewController.swift */; };
+		85028F592F9E5B6A000BE70D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 85028F1A2F9E5B6A000BE70D /* Assets.xcassets */; };
+		85028F5A2F9E5B6A000BE70D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 85028F1A2F9E5B6A000BE70D /* Assets.xcassets */; };
+		85028F5B2F9E5B6A000BE70D /* SafariWebExtensionHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85028F1C2F9E5B6A000BE70D /* SafariWebExtensionHandler.swift */; };
+		85028F5C2F9E5B6A000BE70D /* SafariWebExtensionHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85028F1C2F9E5B6A000BE70D /* SafariWebExtensionHandler.swift */; };
+		85028F742F9E5B6A000BE70D /* popup.js in Resources */ = {isa = PBXBuildFile; fileRef = 85028F6E2F9E5B6A000BE70D /* popup.js */; };
+		85028F752F9E5B6A000BE70D /* background.js in Resources */ = {isa = PBXBuildFile; fileRef = 85028F6F2F9E5B6A000BE70D /* background.js */; };
+		85028F762F9E5B6A000BE70D /* popup.html in Resources */ = {isa = PBXBuildFile; fileRef = 85028F702F9E5B6A000BE70D /* popup.html */; };
+		85028F772F9E5B6A000BE70D /* manifest.json in Resources */ = {isa = PBXBuildFile; fileRef = 85028F712F9E5B6A000BE70D /* manifest.json */; };
+		85028F782F9E5B6A000BE70D /* popup.css in Resources */ = {isa = PBXBuildFile; fileRef = 85028F722F9E5B6A000BE70D /* popup.css */; };
+		85028F792F9E5B6A000BE70D /* content.js in Resources */ = {isa = PBXBuildFile; fileRef = 85028F732F9E5B6A000BE70D /* content.js */; };
+		85028F7A2F9E5B6A000BE70D /* popup.js in Resources */ = {isa = PBXBuildFile; fileRef = 85028F6E2F9E5B6A000BE70D /* popup.js */; };
+		85028F7B2F9E5B6A000BE70D /* background.js in Resources */ = {isa = PBXBuildFile; fileRef = 85028F6F2F9E5B6A000BE70D /* background.js */; };
+		85028F7C2F9E5B6A000BE70D /* popup.html in Resources */ = {isa = PBXBuildFile; fileRef = 85028F702F9E5B6A000BE70D /* popup.html */; };
+		85028F7D2F9E5B6A000BE70D /* manifest.json in Resources */ = {isa = PBXBuildFile; fileRef = 85028F712F9E5B6A000BE70D /* manifest.json */; };
+		85028F7E2F9E5B6A000BE70D /* popup.css in Resources */ = {isa = PBXBuildFile; fileRef = 85028F722F9E5B6A000BE70D /* popup.css */; };
+		85028F7F2F9E5B6A000BE70D /* content.js in Resources */ = {isa = PBXBuildFile; fileRef = 85028F732F9E5B6A000BE70D /* content.js */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		85028F412F9E5B6A000BE70D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 85028F0E2F9E5B67000BE70D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 85028F3E2F9E5B6A000BE70D;
+			remoteInfo = "LLMMemory Extension (iOS)";
+		};
+		85028F4B2F9E5B6A000BE70D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 85028F0E2F9E5B67000BE70D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 85028F482F9E5B6A000BE70D;
+			remoteInfo = "LLMMemory Extension (macOS)";
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		85028F622F9E5B6A000BE70D /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				85028F402F9E5B6A000BE70D /* LLMMemory Extension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		85028F692F9E5B6A000BE70D /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				85028F4A2F9E5B6A000BE70D /* LLMMemory Extension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		85028F152F9E5B68000BE70D /* Base */ = {isa = PBXFileReference; lastKnownFileType = text.html; name = Base; path = Base.lproj/Main.html; sourceTree = "<group>"; };
+		85028F162F9E5B68000BE70D /* Icon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Icon.png; sourceTree = "<group>"; };
+		85028F172F9E5B68000BE70D /* Style.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; path = Style.css; sourceTree = "<group>"; };
+		85028F182F9E5B68000BE70D /* Script.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = Script.js; sourceTree = "<group>"; };
+		85028F192F9E5B68000BE70D /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
+		85028F1A2F9E5B6A000BE70D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		85028F1C2F9E5B6A000BE70D /* SafariWebExtensionHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafariWebExtensionHandler.swift; sourceTree = "<group>"; };
+		85028F212F9E5B6A000BE70D /* LLMMemory.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LLMMemory.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		85028F242F9E5B6A000BE70D /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		85028F262F9E5B6A000BE70D /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
+		85028F292F9E5B6A000BE70D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
+		85028F2C2F9E5B6A000BE70D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
+		85028F2E2F9E5B6A000BE70D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		85028F332F9E5B6A000BE70D /* LLMMemory.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LLMMemory.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		85028F352F9E5B6A000BE70D /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		85028F382F9E5B6A000BE70D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
+		85028F3A2F9E5B6A000BE70D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		85028F3F2F9E5B6A000BE70D /* LLMMemory Extension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "LLMMemory Extension.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
+		85028F442F9E5B6A000BE70D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		85028F492F9E5B6A000BE70D /* LLMMemory Extension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "LLMMemory Extension.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
+		85028F4E2F9E5B6A000BE70D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		85028F6E2F9E5B6A000BE70D /* popup.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; name = popup.js; path = ../../dist/popup.js; sourceTree = "<group>"; };
+		85028F6F2F9E5B6A000BE70D /* background.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; name = background.js; path = ../../dist/background.js; sourceTree = "<group>"; };
+		85028F702F9E5B6A000BE70D /* popup.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; name = popup.html; path = ../../dist/popup.html; sourceTree = "<group>"; };
+		85028F712F9E5B6A000BE70D /* manifest.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = manifest.json; path = ../../dist/manifest.json; sourceTree = "<group>"; };
+		85028F722F9E5B6A000BE70D /* popup.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; name = popup.css; path = ../../dist/popup.css; sourceTree = "<group>"; };
+		85028F732F9E5B6A000BE70D /* content.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; name = content.js; path = ../../dist/content.js; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		85028F1E2F9E5B6A000BE70D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		85028F302F9E5B6A000BE70D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		85028F3C2F9E5B6A000BE70D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		85028F462F9E5B6A000BE70D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		85028F0D2F9E5B67000BE70D = {
+			isa = PBXGroup;
+			children = (
+				85028F122F9E5B68000BE70D /* Shared (App) */,
+				85028F1B2F9E5B6A000BE70D /* Shared (Extension) */,
+				85028F232F9E5B6A000BE70D /* iOS (App) */,
+				85028F342F9E5B6A000BE70D /* macOS (App) */,
+				85028F432F9E5B6A000BE70D /* iOS (Extension) */,
+				85028F4D2F9E5B6A000BE70D /* macOS (Extension) */,
+				85028F222F9E5B6A000BE70D /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		85028F122F9E5B68000BE70D /* Shared (App) */ = {
+			isa = PBXGroup;
+			children = (
+				85028F192F9E5B68000BE70D /* ViewController.swift */,
+				85028F1A2F9E5B6A000BE70D /* Assets.xcassets */,
+				85028F132F9E5B68000BE70D /* Resources */,
+			);
+			path = "Shared (App)";
+			sourceTree = "<group>";
+		};
+		85028F132F9E5B68000BE70D /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				85028F142F9E5B68000BE70D /* Main.html */,
+				85028F162F9E5B68000BE70D /* Icon.png */,
+				85028F172F9E5B68000BE70D /* Style.css */,
+				85028F182F9E5B68000BE70D /* Script.js */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		85028F1B2F9E5B6A000BE70D /* Shared (Extension) */ = {
+			isa = PBXGroup;
+			children = (
+				85028F6D2F9E5B6A000BE70D /* Resources */,
+				85028F1C2F9E5B6A000BE70D /* SafariWebExtensionHandler.swift */,
+			);
+			path = "Shared (Extension)";
+			sourceTree = "<group>";
+		};
+		85028F222F9E5B6A000BE70D /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				85028F212F9E5B6A000BE70D /* LLMMemory.app */,
+				85028F332F9E5B6A000BE70D /* LLMMemory.app */,
+				85028F3F2F9E5B6A000BE70D /* LLMMemory Extension.appex */,
+				85028F492F9E5B6A000BE70D /* LLMMemory Extension.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		85028F232F9E5B6A000BE70D /* iOS (App) */ = {
+			isa = PBXGroup;
+			children = (
+				85028F242F9E5B6A000BE70D /* AppDelegate.swift */,
+				85028F262F9E5B6A000BE70D /* SceneDelegate.swift */,
+				85028F282F9E5B6A000BE70D /* LaunchScreen.storyboard */,
+				85028F2B2F9E5B6A000BE70D /* Main.storyboard */,
+				85028F2E2F9E5B6A000BE70D /* Info.plist */,
+			);
+			path = "iOS (App)";
+			sourceTree = "<group>";
+		};
+		85028F342F9E5B6A000BE70D /* macOS (App) */ = {
+			isa = PBXGroup;
+			children = (
+				85028F352F9E5B6A000BE70D /* AppDelegate.swift */,
+				85028F372F9E5B6A000BE70D /* Main.storyboard */,
+				85028F3A2F9E5B6A000BE70D /* Info.plist */,
+			);
+			path = "macOS (App)";
+			sourceTree = "<group>";
+		};
+		85028F432F9E5B6A000BE70D /* iOS (Extension) */ = {
+			isa = PBXGroup;
+			children = (
+				85028F442F9E5B6A000BE70D /* Info.plist */,
+			);
+			path = "iOS (Extension)";
+			sourceTree = "<group>";
+		};
+		85028F4D2F9E5B6A000BE70D /* macOS (Extension) */ = {
+			isa = PBXGroup;
+			children = (
+				85028F4E2F9E5B6A000BE70D /* Info.plist */,
+			);
+			path = "macOS (Extension)";
+			sourceTree = "<group>";
+		};
+		85028F6D2F9E5B6A000BE70D /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				85028F6E2F9E5B6A000BE70D /* popup.js */,
+				85028F6F2F9E5B6A000BE70D /* background.js */,
+				85028F702F9E5B6A000BE70D /* popup.html */,
+				85028F712F9E5B6A000BE70D /* manifest.json */,
+				85028F722F9E5B6A000BE70D /* popup.css */,
+				85028F732F9E5B6A000BE70D /* content.js */,
+			);
+			name = Resources;
+			path = "Shared (Extension)";
+			sourceTree = SOURCE_ROOT;
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		85028F202F9E5B6A000BE70D /* LLMMemory (iOS) */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 85028F632F9E5B6A000BE70D /* Build configuration list for PBXNativeTarget "LLMMemory (iOS)" */;
+			buildPhases = (
+				85028F1D2F9E5B6A000BE70D /* Sources */,
+				85028F1E2F9E5B6A000BE70D /* Frameworks */,
+				85028F1F2F9E5B6A000BE70D /* Resources */,
+				85028F622F9E5B6A000BE70D /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				85028F422F9E5B6A000BE70D /* PBXTargetDependency */,
+			);
+			name = "LLMMemory (iOS)";
+			packageProductDependencies = (
+			);
+			productName = "LLMMemory (iOS)";
+			productReference = 85028F212F9E5B6A000BE70D /* LLMMemory.app */;
+			productType = "com.apple.product-type.application";
+		};
+		85028F322F9E5B6A000BE70D /* LLMMemory (macOS) */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 85028F6A2F9E5B6A000BE70D /* Build configuration list for PBXNativeTarget "LLMMemory (macOS)" */;
+			buildPhases = (
+				85028F2F2F9E5B6A000BE70D /* Sources */,
+				85028F302F9E5B6A000BE70D /* Frameworks */,
+				85028F312F9E5B6A000BE70D /* Resources */,
+				85028F692F9E5B6A000BE70D /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				85028F4C2F9E5B6A000BE70D /* PBXTargetDependency */,
+			);
+			name = "LLMMemory (macOS)";
+			packageProductDependencies = (
+			);
+			productName = "LLMMemory (macOS)";
+			productReference = 85028F332F9E5B6A000BE70D /* LLMMemory.app */;
+			productType = "com.apple.product-type.application";
+		};
+		85028F3E2F9E5B6A000BE70D /* LLMMemory Extension (iOS) */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 85028F5F2F9E5B6A000BE70D /* Build configuration list for PBXNativeTarget "LLMMemory Extension (iOS)" */;
+			buildPhases = (
+				85028F3B2F9E5B6A000BE70D /* Sources */,
+				85028F3C2F9E5B6A000BE70D /* Frameworks */,
+				85028F3D2F9E5B6A000BE70D /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "LLMMemory Extension (iOS)";
+			packageProductDependencies = (
+			);
+			productName = "LLMMemory Extension (iOS)";
+			productReference = 85028F3F2F9E5B6A000BE70D /* LLMMemory Extension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		85028F482F9E5B6A000BE70D /* LLMMemory Extension (macOS) */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 85028F662F9E5B6A000BE70D /* Build configuration list for PBXNativeTarget "LLMMemory Extension (macOS)" */;
+			buildPhases = (
+				85028F452F9E5B6A000BE70D /* Sources */,
+				85028F462F9E5B6A000BE70D /* Frameworks */,
+				85028F472F9E5B6A000BE70D /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "LLMMemory Extension (macOS)";
+			packageProductDependencies = (
+			);
+			productName = "LLMMemory Extension (macOS)";
+			productReference = 85028F492F9E5B6A000BE70D /* LLMMemory Extension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		85028F0E2F9E5B67000BE70D /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2640;
+				LastUpgradeCheck = 2640;
+				TargetAttributes = {
+					85028F202F9E5B6A000BE70D = {
+						CreatedOnToolsVersion = 26.4.1;
+					};
+					85028F322F9E5B6A000BE70D = {
+						CreatedOnToolsVersion = 26.4.1;
+					};
+					85028F3E2F9E5B6A000BE70D = {
+						CreatedOnToolsVersion = 26.4.1;
+					};
+					85028F482F9E5B6A000BE70D = {
+						CreatedOnToolsVersion = 26.4.1;
+					};
+				};
+			};
+			buildConfigurationList = 85028F112F9E5B67000BE70D /* Build configuration list for PBXProject "LLMMemory" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 85028F0D2F9E5B67000BE70D;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 85028F222F9E5B6A000BE70D /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				85028F202F9E5B6A000BE70D /* LLMMemory (iOS) */,
+				85028F322F9E5B6A000BE70D /* LLMMemory (macOS) */,
+				85028F3E2F9E5B6A000BE70D /* LLMMemory Extension (iOS) */,
+				85028F482F9E5B6A000BE70D /* LLMMemory Extension (macOS) */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		85028F1F2F9E5B6A000BE70D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				85028F512F9E5B6A000BE70D /* Icon.png in Resources */,
+				85028F2A2F9E5B6A000BE70D /* LaunchScreen.storyboard in Resources */,
+				85028F4F2F9E5B6A000BE70D /* Main.html in Resources */,
+				85028F552F9E5B6A000BE70D /* Script.js in Resources */,
+				85028F592F9E5B6A000BE70D /* Assets.xcassets in Resources */,
+				85028F2D2F9E5B6A000BE70D /* Main.storyboard in Resources */,
+				85028F532F9E5B6A000BE70D /* Style.css in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		85028F312F9E5B6A000BE70D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				85028F522F9E5B6A000BE70D /* Icon.png in Resources */,
+				85028F542F9E5B6A000BE70D /* Style.css in Resources */,
+				85028F392F9E5B6A000BE70D /* Main.storyboard in Resources */,
+				85028F562F9E5B6A000BE70D /* Script.js in Resources */,
+				85028F5A2F9E5B6A000BE70D /* Assets.xcassets in Resources */,
+				85028F502F9E5B6A000BE70D /* Main.html in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		85028F3D2F9E5B6A000BE70D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				85028F7F2F9E5B6A000BE70D /* content.js in Resources */,
+				85028F7E2F9E5B6A000BE70D /* popup.css in Resources */,
+				85028F7D2F9E5B6A000BE70D /* manifest.json in Resources */,
+				85028F7B2F9E5B6A000BE70D /* background.js in Resources */,
+				85028F7C2F9E5B6A000BE70D /* popup.html in Resources */,
+				85028F7A2F9E5B6A000BE70D /* popup.js in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		85028F472F9E5B6A000BE70D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				85028F792F9E5B6A000BE70D /* content.js in Resources */,
+				85028F782F9E5B6A000BE70D /* popup.css in Resources */,
+				85028F772F9E5B6A000BE70D /* manifest.json in Resources */,
+				85028F752F9E5B6A000BE70D /* background.js in Resources */,
+				85028F762F9E5B6A000BE70D /* popup.html in Resources */,
+				85028F742F9E5B6A000BE70D /* popup.js in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		85028F1D2F9E5B6A000BE70D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				85028F572F9E5B6A000BE70D /* ViewController.swift in Sources */,
+				85028F252F9E5B6A000BE70D /* AppDelegate.swift in Sources */,
+				85028F272F9E5B6A000BE70D /* SceneDelegate.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		85028F2F2F9E5B6A000BE70D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				85028F582F9E5B6A000BE70D /* ViewController.swift in Sources */,
+				85028F362F9E5B6A000BE70D /* AppDelegate.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		85028F3B2F9E5B6A000BE70D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				85028F5B2F9E5B6A000BE70D /* SafariWebExtensionHandler.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		85028F452F9E5B6A000BE70D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				85028F5C2F9E5B6A000BE70D /* SafariWebExtensionHandler.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		85028F422F9E5B6A000BE70D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 85028F3E2F9E5B6A000BE70D /* LLMMemory Extension (iOS) */;
+			targetProxy = 85028F412F9E5B6A000BE70D /* PBXContainerItemProxy */;
+		};
+		85028F4C2F9E5B6A000BE70D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 85028F482F9E5B6A000BE70D /* LLMMemory Extension (macOS) */;
+			targetProxy = 85028F4B2F9E5B6A000BE70D /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin PBXVariantGroup section */
+		85028F142F9E5B68000BE70D /* Main.html */ = {
+			isa = PBXVariantGroup;
+			children = (
+				85028F152F9E5B68000BE70D /* Base */,
+			);
+			name = Main.html;
+			sourceTree = "<group>";
+		};
+		85028F282F9E5B6A000BE70D /* LaunchScreen.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				85028F292F9E5B6A000BE70D /* Base */,
+			);
+			name = LaunchScreen.storyboard;
+			sourceTree = "<group>";
+		};
+		85028F2B2F9E5B6A000BE70D /* Main.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				85028F2C2F9E5B6A000BE70D /* Base */,
+			);
+			name = Main.storyboard;
+			sourceTree = "<group>";
+		};
+		85028F372F9E5B6A000BE70D /* Main.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				85028F382F9E5B6A000BE70D /* Base */,
+			);
+			name = Main.storyboard;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
+/* Begin XCBuildConfiguration section */
+		85028F5D2F9E5B6A000BE70D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		85028F5E2F9E5B6A000BE70D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		85028F602F9E5B6A000BE70D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "iOS (Extension)/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "LLMMemory Extension";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.yourCompany.LLMMemory.Extension;
+				PRODUCT_NAME = "LLMMemory Extension";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		85028F612F9E5B6A000BE70D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "iOS (Extension)/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "LLMMemory Extension";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.yourCompany.LLMMemory.Extension;
+				PRODUCT_NAME = "LLMMemory Extension";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		85028F642F9E5B6A000BE70D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 8X5ZCDL6RP;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "iOS (App)/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = LLMMemory;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
+				INFOPLIST_KEY_UIMainStoryboardFile = Main;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+					"-framework",
+					WebKit,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.aayush.LLMMemory;
+				PRODUCT_NAME = LLMMemory;
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		85028F652F9E5B6A000BE70D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 8X5ZCDL6RP;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "iOS (App)/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = LLMMemory;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
+				INFOPLIST_KEY_UIMainStoryboardFile = Main;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+					"-framework",
+					WebKit,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.aayush.LLMMemory;
+				PRODUCT_NAME = LLMMemory;
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		85028F672F9E5B6A000BE70D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "macOS (Extension)/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "LLMMemory Extension";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.14;
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.yourCompany.LLMMemory.Extension;
+				PRODUCT_NAME = "LLMMemory Extension";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		85028F682F9E5B6A000BE70D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "macOS (Extension)/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "LLMMemory Extension";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.14;
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.yourCompany.LLMMemory.Extension;
+				PRODUCT_NAME = "LLMMemory Extension";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		85028F6B2F9E5B6A000BE70D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "macOS (App)/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = LLMMemory;
+				INFOPLIST_KEY_NSMainStoryboardFile = Main;
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.14;
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+					"-framework",
+					WebKit,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.yourCompany.LLMMemory;
+				PRODUCT_NAME = LLMMemory;
+				REGISTER_APP_GROUPS = YES;
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		85028F6C2F9E5B6A000BE70D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "macOS (App)/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = LLMMemory;
+				INFOPLIST_KEY_NSMainStoryboardFile = Main;
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.14;
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+					"-framework",
+					WebKit,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.yourCompany.LLMMemory;
+				PRODUCT_NAME = LLMMemory;
+				REGISTER_APP_GROUPS = YES;
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		85028F112F9E5B67000BE70D /* Build configuration list for PBXProject "LLMMemory" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				85028F5D2F9E5B6A000BE70D /* Debug */,
+				85028F5E2F9E5B6A000BE70D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		85028F5F2F9E5B6A000BE70D /* Build configuration list for PBXNativeTarget "LLMMemory Extension (iOS)" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				85028F602F9E5B6A000BE70D /* Debug */,
+				85028F612F9E5B6A000BE70D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		85028F632F9E5B6A000BE70D /* Build configuration list for PBXNativeTarget "LLMMemory (iOS)" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				85028F642F9E5B6A000BE70D /* Debug */,
+				85028F652F9E5B6A000BE70D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		85028F662F9E5B6A000BE70D /* Build configuration list for PBXNativeTarget "LLMMemory Extension (macOS)" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				85028F672F9E5B6A000BE70D /* Debug */,
+				85028F682F9E5B6A000BE70D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		85028F6A2F9E5B6A000BE70D /* Build configuration list for PBXNativeTarget "LLMMemory (macOS)" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				85028F6B2F9E5B6A000BE70D /* Debug */,
+				85028F6C2F9E5B6A000BE70D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 85028F0E2F9E5B67000BE70D /* Project object */;
+}

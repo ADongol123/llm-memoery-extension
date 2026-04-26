@@ -1,8 +1,10 @@
 const saveBtn = document.getElementById("saveBtn");
-const generateBtn = document.getElementById("generateBtn");
-const clearBtn = document.getElementById("clearBtn");
+const clearAllBtn = document.getElementById("clearAllBtn");
 const statusEl = document.getElementById("status");
-const previewEl = document.getElementById("preview");
+const memoryListEl = document.getElementById("memoryList");
+const emptyStateEl = document.getElementById("emptyState");
+const footerEl = document.getElementById("footer");
+const platformBadgeEl = document.getElementById("platformBadge");
 
 function showStatus(msg, type = "success") {
   statusEl.textContent = msg;
@@ -11,98 +13,165 @@ function showStatus(msg, type = "success") {
   setTimeout(() => statusEl.classList.add("hidden"), 3000);
 }
 
-function showPreview(text) {
-  previewEl.textContent = text;
-  previewEl.classList.remove("hidden");
+function makeTitle(messages) {
+  const first = messages.find((m) => m.role === "user");
+  if (!first) return "Untitled conversation";
+  const text = first.content.replace(/\s+/g, " ").trim();
+  return text.length > 52 ? text.slice(0, 52) + "…" : text;
 }
 
-function buildSummary(messages) {
-  return messages
-    .slice(-10)
-    .map((m) => {
-      const snippet = m.content.length > 200 ? m.content.slice(0, 200) + "…" : m.content;
-      return `[${m.role.toUpperCase()}]: ${snippet}`;
-    })
-    .join("\n\n");
-}
-
-function generateBriefingPrompt(memory) {
-  if (!memory) return "No memory saved yet.";
-  const recent = (memory.messages || []).slice(-6);
+function buildBriefing(memory) {
+  const recent = memory.messages.slice(-8);
   const lines = recent
     .map((m) => `${m.role === "user" ? "User" : "Assistant"}: ${m.content}`)
     .join("\n\n");
+  return (
+    `[Context from a previous ${memory.platform} conversation — ${memory.timestamp}]\n\n` +
+    lines +
+    `\n\n[Please acknowledge you've read this context and continue from here.]`
+  );
+}
 
-  return `You are continuing an existing conversation that was previously held on a different AI assistant.
+function renderMemories(memories) {
+  memoryListEl.innerHTML = "";
 
-Source: ${memory.url || "unknown page"}
-Saved at: ${memory.timestamp || "unknown time"}
+  if (memories.length === 0) {
+    emptyStateEl.classList.remove("hidden");
+    footerEl.classList.add("hidden");
+    return;
+  }
 
---- Recent Conversation ---
-${lines}
---- End of Conversation ---
+  emptyStateEl.classList.add("hidden");
+  footerEl.classList.remove("hidden");
 
-Please acknowledge that you have reviewed this context and are ready to continue the conversation from where it left off.`;
+  memories.forEach((mem) => {
+    const card = document.createElement("div");
+    card.className = "memory-card";
+    card.innerHTML = `
+      <div class="memory-card-top">
+        <div class="memory-title">${mem.title}</div>
+        <div class="memory-actions">
+          <button class="btn-icon inject-btn" title="Inject into current chat">↗</button>
+          <button class="btn-icon copy-btn" title="Copy briefing">⎘</button>
+          <button class="btn-icon danger delete-btn" title="Delete">✕</button>
+        </div>
+      </div>
+      <div class="memory-meta">
+        <span class="platform-tag">${mem.platform}</span>
+        ${mem.timestamp} · ${mem.messages.length} messages
+      </div>
+    `;
+
+    card.querySelector(".inject-btn").addEventListener("click", () => {
+      injectIntoTab(mem);
+    });
+
+    card.querySelector(".copy-btn").addEventListener("click", () => {
+      navigator.clipboard.writeText(buildBriefing(mem)).then(() => {
+        showStatus("Briefing copied to clipboard!");
+      });
+    });
+
+    card.querySelector(".delete-btn").addEventListener("click", () => {
+      chrome.runtime.sendMessage({ type: "DELETE_MEMORY", id: mem.id }, () => {
+        loadMemories();
+      });
+    });
+
+    memoryListEl.appendChild(card);
+  });
+}
+
+function injectIntoTab(mem) {
+  chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
+    if (!tab) return;
+    const briefing = buildBriefing(mem);
+    chrome.tabs.sendMessage(
+      tab.id,
+      { type: "INJECT_CONTEXT", text: briefing },
+      (res) => {
+        if (chrome.runtime.lastError || !res || !res.success) {
+          // Page doesn't support injection — copy to clipboard instead
+          navigator.clipboard.writeText(briefing).then(() => {
+            showStatus("Copied to clipboard (injection not available here).", "success");
+          });
+        } else {
+          showStatus("Context injected!");
+          window.close();
+        }
+      }
+    );
+  });
+}
+
+function loadMemories() {
+  chrome.runtime.sendMessage({ type: "GET_MEMORIES" }, (res) => {
+    renderMemories(res?.data || []);
+  });
+}
+
+function detectPlatform() {
+  chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
+    if (!tab) return;
+    chrome.tabs.sendMessage(tab.id, { type: "GET_PLATFORM" }, (res) => {
+      if (chrome.runtime.lastError || !res?.platform) return;
+      platformBadgeEl.textContent = `${res.platform} detected`;
+      platformBadgeEl.classList.remove("hidden");
+    });
+  });
 }
 
 saveBtn.addEventListener("click", () => {
   chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
+    if (!tab) return;
     chrome.tabs.sendMessage(tab.id, { type: "GET_CONVERSATION" }, (response) => {
-      if (chrome.runtime.lastError || !response || !response.success) {
-        showStatus("Could not read messages from this page.", "error");
+      if (chrome.runtime.lastError || !response?.success) {
+        showStatus("Could not read this page. Open an AI chat first.", "error");
         return;
       }
 
-      const messages = response.messages;
+      const { messages, platform } = response;
+
       if (!messages || messages.length === 0) {
         showStatus("No conversation found on this page.", "error");
         return;
       }
 
       const payload = {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        title: makeTitle(messages),
         messages,
-        summary: buildSummary(messages),
+        platform: platform || "Unknown",
         url: tab.url,
-        timestamp: new Date().toLocaleString(),
+        timestamp: new Date().toLocaleString(undefined, {
+          month: "short",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
       };
 
       chrome.runtime.sendMessage({ type: "SAVE_MEMORY", payload }, (res) => {
-        if (res && res.success) {
-          showStatus(`Saved ${messages.length} messages.`, "success");
-          showPreview(payload.summary);
+        if (res?.success) {
+          showStatus(`Saved — ${messages.length} messages.`);
+          loadMemories();
         } else {
-          showStatus("Failed to save memory.", "error");
+          showStatus("Failed to save.", "error");
         }
       });
     });
   });
 });
 
-generateBtn.addEventListener("click", () => {
-  chrome.runtime.sendMessage({ type: "GET_MEMORY" }, (res) => {
-    if (!res || !res.success || !res.data) {
-      showStatus("No memory saved yet. Save a conversation first.", "error");
-      return;
-    }
-
-    const prompt = generateBriefingPrompt(res.data);
-    navigator.clipboard.writeText(prompt).then(() => {
-      showStatus("Briefing copied to clipboard!", "success");
-      showPreview(prompt);
-    }).catch(() => {
-      showStatus("Clipboard access denied.", "error");
-      showPreview(prompt);
-    });
-  });
-});
-
-clearBtn.addEventListener("click", () => {
-  chrome.runtime.sendMessage({ type: "CLEAR_MEMORY" }, (res) => {
-    if (res && res.success) {
-      previewEl.classList.add("hidden");
-      showStatus("Memory cleared.", "success");
-    } else {
-      showStatus("Failed to clear memory.", "error");
+clearAllBtn.addEventListener("click", () => {
+  chrome.runtime.sendMessage({ type: "CLEAR_ALL" }, (res) => {
+    if (res?.success) {
+      showStatus("All memories cleared.");
+      loadMemories();
     }
   });
 });
+
+// Init
+detectPlatform();
+loadMemories();

@@ -8,17 +8,30 @@
   </head>
   <body>
     <div class="container">
-      <h1 class="title">🧠 LLM Memory</h1>
-      <p class="subtitle">Save context. Switch freely.</p>
-
-      <div class="button-group">
-        <button id="saveBtn" class="btn btn-primary">💾 Save Context</button>
-        <button id="generateBtn" class="btn btn-secondary">📋 Copy Briefing</button>
-        <button id="clearBtn" class="btn btn-danger">🗑 Clear Memory</button>
+      <div class="header">
+        <div class="header-left">
+          <span class="logo">🧠</span>
+          <div>
+            <div class="title">LLM Memory</div>
+            <div id="platformBadge" class="platform-badge hidden"></div>
+          </div>
+        </div>
+        <button id="saveBtn" class="btn btn-primary btn-sm">+ Save</button>
       </div>
 
       <div id="status" class="status hidden"></div>
-      <div id="preview" class="preview hidden"></div>
+
+      <div id="memoryList" class="memory-list"></div>
+
+      <div id="emptyState" class="empty-state hidden">
+        <div class="empty-icon">💬</div>
+        <div class="empty-text">No memories saved yet.</div>
+        <div class="empty-sub">Open an AI chat and click + Save.</div>
+      </div>
+
+      <div id="footer" class="footer hidden">
+        <button id="clearAllBtn" class="btn btn-ghost btn-sm">Clear all</button>
+      </div>
     </div>
 
     <script src="popup.js"></script>
