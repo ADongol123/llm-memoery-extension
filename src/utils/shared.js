@@ -34,6 +34,14 @@ export function trimMessages(messages) {
 }
 
 export function buildBriefing(memory) {
+  if (memory.isSnippet) {
+    const text = memory.messages[0]?.content || "";
+    return (
+      `[Snippet from ${memory.platform} — ${memory.timestamp}]\n\n` +
+      text +
+      `\n\n[Reference this snippet in your response.]`
+    );
+  }
   const msgs = trimMessages(memory.messages);
   const body = msgs
     .map((m) => {
@@ -45,5 +53,33 @@ export function buildBriefing(memory) {
     `[Continuing a ${memory.platform} conversation — ${memory.timestamp}]\n\n` +
     body +
     `\n\n[Acknowledge you've read this and continue from here.]`
+  );
+}
+
+export function buildSummary(memory) {
+  if (memory.isSnippet) return buildBriefing(memory);
+
+  const msgs = memory.messages;
+  const userMsgs      = msgs.filter((m) => m.role === "user");
+  const assistantMsgs = msgs.filter((m) => m.role === "assistant");
+
+  const keyPoints = userMsgs
+    .slice(0, 3)
+    .map((m) => `• ${m.content.replace(/\s+/g, " ").slice(0, 120)}`)
+    .join("\n");
+
+  const lastAnswer = assistantMsgs.slice(-1)[0];
+  const lastText   = lastAnswer
+    ? lastAnswer.content.replace(/\s+/g, " ").slice(0, 400)
+    : "";
+
+  return (
+    `[Summary — ${memory.platform}, ${memory.timestamp}]\n` +
+    `Topic: ${memory.title}\n\n` +
+    `What was discussed:\n${keyPoints}\n\n` +
+    (lastText
+      ? `Last response:\n${lastText}${lastText.length >= 400 ? "…" : ""}\n\n`
+      : "") +
+    `[Continue this conversation from where it left off.]`
   );
 }

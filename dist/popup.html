@@ -38,11 +38,27 @@
         Toggle on — then open any AI chat to continue conversations from Claude, ChatGPT, Grok, and more.
       </div>
 
-      <!-- Main panel (visible when ON) -->
+      <!-- Main panel -->
       <div id="mainPanel" class="hidden">
 
-        <!-- Tab bar -->
+        <!-- Search -->
+        <div class="search-wrap">
+          <span class="search-icon">⌕</span>
+          <input id="searchInput" class="search-input" placeholder="Search conversations…" autocomplete="off" />
+          <button id="clearSearch" class="search-clear hidden">×</button>
+        </div>
+
+        <!-- Tabs -->
         <div id="tabBar" class="tab-bar"></div>
+
+        <!-- Inject mode -->
+        <div class="mode-row">
+          <span class="mode-label">Inject as</span>
+          <div class="mode-pills">
+            <button id="modeFullBtn"    class="mode-pill active">Full</button>
+            <button id="modeSummaryBtn" class="mode-pill">Summary</button>
+          </div>
+        </div>
 
         <!-- Conversation list -->
         <div id="convList" class="conv-list">
@@ -51,7 +67,7 @@
           </div>
         </div>
 
-        <!-- Bottom actions -->
+        <!-- Bottom row -->
         <div class="bottom-row">
           <button id="randomBtn" class="btn-random">↻  Pick random</button>
         </div>
