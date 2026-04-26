@@ -1,26 +1,31 @@
+import { buildBriefing } from "../utils/shared.js";
+
 const $ = (id) => document.getElementById(id);
 
-const toggleInput   = $("toggleInput");
-const statusDot     = $("statusDot");
-const statusText    = $("statusText");
-const recentSection = $("recentSection");
-const idleState     = $("idleState");
-const convList      = $("convList");
-const loadingState  = $("loadingState");
-const platformLabel = $("platformLabel");
-const randomBtn     = $("randomBtn");
-const toast         = $("toast");
+const toggleInput = $("toggleInput");
+const statusDot   = $("statusDot");
+const statusText  = $("statusText");
+const countBadge  = $("countBadge");
+const offState    = $("offState");
+const mainPanel   = $("mainPanel");
+const tabBar      = $("tabBar");
+const convList    = $("convList");
+const randomBtn   = $("randomBtn");
+const toast       = $("toast");
 
-let currentConvs = [];
+const PLATFORMS = ["Claude", "ChatGPT", "Gemini", "Grok", "Perplexity"];
+
+let allMemories   = [];
+let activeTab     = "All";
+let currentItems  = []; // flat list currently rendered, for random pick
 
 // ── Toast ──────────────────────────────────────────────────────────────────────
 
 function showToast(msg) {
+  clearTimeout(showToast._t);
   toast.textContent = msg;
   toast.classList.remove("hidden");
-  clearTimeout(showToast._t);
-  // Re-trigger animation
-  void toast.offsetWidth;
+  void toast.offsetWidth; // re-trigger animation
   showToast._t = setTimeout(() => toast.classList.add("hidden"), 2500);
 }
 
@@ -31,81 +36,178 @@ function applyToggleUI(isOn) {
   statusText.textContent = isOn ? "Picker is active" : "Picker is off";
 }
 
-// ── Render conversation list ──────────────────────────────────────────────────
+// ── Data helpers ───────────────────────────────────────────────────────────────
 
-function renderConvs(convs, platformName) {
-  currentConvs = convs;
-  loadingState.classList.add("hidden");
+function getTabMemories(tab) {
+  if (tab === "All") return allMemories;
+  return allMemories.filter((m) => m.platform === tab);
+}
 
-  if (!convs.length) {
-    idleState.classList.remove("hidden");
-    recentSection.classList.add("hidden");
+function platformsWithData() {
+  const found = new Set(allMemories.map((m) => m.platform));
+  return PLATFORMS.filter((p) => found.has(p));
+}
+
+// ── Render tabs ────────────────────────────────────────────────────────────────
+
+function renderTabs() {
+  tabBar.innerHTML = "";
+  const tabs = ["All", ...platformsWithData()];
+  tabs.forEach((label) => {
+    const btn = document.createElement("button");
+    btn.className = "tab" + (activeTab === label ? " active" : "");
+    btn.textContent = label;
+    btn.addEventListener("click", () => {
+      activeTab = label;
+      renderTabs();
+      renderList();
+    });
+    tabBar.appendChild(btn);
+  });
+}
+
+// ── Render list ────────────────────────────────────────────────────────────────
+
+function renderList() {
+  convList.innerHTML = "";
+  currentItems = [];
+
+  const mems = getTabMemories(activeTab);
+
+  if (!mems.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty-state";
+    empty.textContent =
+      activeTab === "All"
+        ? "No conversations saved yet. Use an AI chat and they'll appear here."
+        : `No saved conversations from ${activeTab} yet.`;
+    convList.appendChild(empty);
     return;
   }
 
-  idleState.classList.add("hidden");
-  recentSection.classList.remove("hidden");
-  platformLabel.textContent = `Recent on ${platformName}`;
+  const recent = mems.slice(0, 5);
+  const older  = mems.slice(5);
 
-  convList.innerHTML = "";
-  convs.forEach((conv, i) => {
-    const item = document.createElement("div");
-    item.className = "conv-item";
-    item.innerHTML = `
-      <span class="conv-num">${i + 1}</span>
-      <span class="conv-title" title="${conv.title}">${conv.title}</span>
-      <span class="conv-arrow">→</span>
+  // Recent section label
+  if (older.length > 0) {
+    const lbl = document.createElement("div");
+    lbl.className = "section-label";
+    lbl.textContent = "Recent";
+    convList.appendChild(lbl);
+  }
+
+  recent.forEach((mem, i) => {
+    convList.appendChild(makeItem(mem, i + 1));
+    currentItems.push(mem);
+  });
+
+  if (older.length > 0) {
+    // Older divider
+    const divider = document.createElement("div");
+    divider.className = "older-divider";
+    divider.innerHTML = `
+      <div class="older-divider-line"></div>
+      <span class="older-divider-text">Older</span>
+      <div class="older-divider-line"></div>
     `;
-    item.addEventListener("click", () => navigateToConv(conv));
-    convList.appendChild(item);
-  });
+    convList.appendChild(divider);
+
+    older.forEach((mem, i) => {
+      convList.appendChild(makeItem(mem, recent.length + i + 1));
+      currentItems.push(mem);
+    });
+  }
 }
 
-function navigateToConv(conv) {
-  if (!conv.url) return;
+function makeItem(mem, num) {
+  const item = document.createElement("div");
+  item.className = "conv-item";
+  item.style.animationDelay = `${Math.min(num - 1, 7) * 0.04}s`;
+
+  const showPlatform = activeTab === "All";
+
+  item.innerHTML = `
+    <span class="conv-num">${num}</span>
+    <div class="conv-body">
+      <div class="conv-title" title="${mem.title}">${mem.title}</div>
+      <div class="conv-meta">
+        ${showPlatform ? `<span class="platform-badge">${mem.platform}</span>` : ""}
+        <span>${mem.timestamp}</span>
+        <span>·</span>
+        <span>${mem.messages.length} msgs</span>
+      </div>
+    </div>
+    <span class="conv-arrow">→</span>
+  `;
+
+  item.addEventListener("click", () => injectMemory(mem, item));
+  return item;
+}
+
+// ── Inject ─────────────────────────────────────────────────────────────────────
+
+function injectMemory(mem, itemEl) {
+  const briefing = buildBriefing(mem);
+
   chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
-    if (!tab) return;
-    chrome.tabs.update(tab.id, { url: conv.url });
-    window.close();
-  });
-}
-
-function pickRandom() {
-  if (!currentConvs.length) return;
-  const idx = Math.floor(Math.random() * currentConvs.length);
-  const conv = currentConvs[idx];
-
-  // Flash the item then navigate
-  const items = convList.querySelectorAll(".conv-item");
-  if (items[idx]) {
-    items[idx].classList.add("flashing");
-  }
-  setTimeout(() => navigateToConv(conv), 500);
-}
-
-// ── Load recent conversations from active tab ─────────────────────────────────
-
-async function loadRecentConvs() {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab) {
-    idleState.classList.remove("hidden");
-    return;
-  }
-
-  recentSection.classList.remove("hidden");
-  idleState.classList.add("hidden");
-  loadingState.classList.remove("hidden");
-  convList.innerHTML = "";
-
-  chrome.tabs.sendMessage(tab.id, { type: "GET_RECENT_CONVERSATIONS" }, (res) => {
-    if (chrome.runtime.lastError || !res?.success || !res.conversations?.length) {
-      loadingState.classList.add("hidden");
-      idleState.classList.remove("hidden");
-      recentSection.classList.add("hidden");
+    if (!tab) {
+      copyFallback(briefing);
       return;
     }
-    renderConvs(res.conversations, res.platform || "AI");
+    chrome.tabs.sendMessage(tab.id, { type: "INJECT_CONTEXT", text: briefing }, (res) => {
+      if (chrome.runtime.lastError || !res?.success) {
+        copyFallback(briefing);
+      } else {
+        chrome.runtime.sendMessage({ type: "BUMP_ANALYTIC", key: "injects" });
+        if (itemEl) {
+          itemEl.classList.add("flashing");
+          setTimeout(() => itemEl.classList.remove("flashing"), 450);
+        }
+        showToast("Context injected ✓");
+        setTimeout(() => window.close(), 900);
+      }
+    });
   });
+}
+
+function copyFallback(text) {
+  navigator.clipboard.writeText(text).then(() => {
+    showToast("Copied to clipboard — paste into your chat");
+  }).catch(() => showToast("Could not copy"));
+}
+
+// ── Random ─────────────────────────────────────────────────────────────────────
+
+function pickRandom() {
+  if (!currentItems.length) return;
+  const idx  = Math.floor(Math.random() * currentItems.length);
+  const mem  = currentItems[idx];
+  const item = convList.querySelectorAll(".conv-item")[idx];
+
+  if (item) {
+    item.classList.add("flashing");
+    setTimeout(() => {
+      item.classList.remove("flashing");
+      injectMemory(mem, item);
+    }, 450);
+  } else {
+    injectMemory(mem, null);
+  }
+}
+
+// ── Load & render everything ──────────────────────────────────────────────────
+
+async function loadAndRender() {
+  const res = await new Promise((r) =>
+    chrome.runtime.sendMessage({ type: "GET_MEMORIES" }, r)
+  );
+  allMemories = (res?.data || []).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+
+  countBadge.textContent = `${allMemories.length} saved`;
+  countBadge.classList.toggle("hidden", allMemories.length === 0);
+
+  renderTabs();
+  renderList();
 }
 
 // ── Init ───────────────────────────────────────────────────────────────────────
@@ -118,11 +220,11 @@ async function init() {
   applyToggleUI(isOn);
 
   if (isOn) {
-    await loadRecentConvs();
+    offState.classList.add("hidden");
+    mainPanel.classList.remove("hidden");
+    await loadAndRender();
   }
 }
-
-// ── Events ─────────────────────────────────────────────────────────────────────
 
 toggleInput.addEventListener("change", async () => {
   const isOn = toggleInput.checked;
@@ -130,10 +232,12 @@ toggleInput.addEventListener("change", async () => {
   applyToggleUI(isOn);
 
   if (isOn) {
-    await loadRecentConvs();
+    offState.classList.add("hidden");
+    mainPanel.classList.remove("hidden");
+    await loadAndRender();
   } else {
-    recentSection.classList.add("hidden");
-    idleState.classList.remove("hidden");
+    mainPanel.classList.add("hidden");
+    offState.classList.remove("hidden");
   }
 });
 

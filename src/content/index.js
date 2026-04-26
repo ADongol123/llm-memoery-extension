@@ -1,12 +1,12 @@
 import { makeTitle, buildBriefing } from "../utils/shared.js";
 
 const PLATFORM_MAP = {
-  "claude.ai":           "Claude",
-  "chatgpt.com":         "ChatGPT",
-  "chat.openai.com":     "ChatGPT",
-  "gemini.google.com":   "Gemini",
-  "perplexity.ai":       "Perplexity",
-  "grok.com":            "Grok",
+  "claude.ai":         "Claude",
+  "chatgpt.com":       "ChatGPT",
+  "chat.openai.com":   "ChatGPT",
+  "gemini.google.com": "Gemini",
+  "perplexity.ai":     "Perplexity",
+  "grok.com":          "Grok",
 };
 
 function getPlatform() {
@@ -15,65 +15,6 @@ function getPlatform() {
     if (host.includes(domain)) return name;
   }
   return null;
-}
-
-// ── Sidebar scraping ───────────────────────────────────────────────────────────
-
-function getRecentConversations() {
-  const host = window.location.hostname;
-  const raw = [];
-
-  if (host.includes("claude.ai")) {
-    // Main nav sidebar: links to /chat/uuid
-    document.querySelectorAll('nav a[href*="/chat/"]').forEach((a) => {
-      const title = a.innerText.trim();
-      if (title && a.href) raw.push({ title, url: a.href });
-    });
-
-  } else if (host.includes("chatgpt.com") || host.includes("openai.com")) {
-    // Sidebar conversation list: links /c/uuid
-    document.querySelectorAll('nav a[href^="/c/"], nav ol li a').forEach((a) => {
-      const title = a.innerText.trim();
-      if (title && a.href) raw.push({ title, url: a.href });
-    });
-
-  } else if (host.includes("gemini.google.com")) {
-    // Recent chats in the left rail
-    document.querySelectorAll(
-      'a[href*="/app/"], .conversation-list-item a, [data-conversation-id]'
-    ).forEach((el) => {
-      const a = el.tagName === "A" ? el : el.querySelector("a");
-      if (!a) return;
-      const title = a.innerText.trim() || el.innerText.trim();
-      if (title) raw.push({ title, url: a.href || "" });
-    });
-
-  } else if (host.includes("perplexity.ai")) {
-    // Threads in the left sidebar
-    document.querySelectorAll(
-      'a[href^="/search/"], a[href^="/thread/"]'
-    ).forEach((a) => {
-      const title = a.innerText.trim();
-      if (title) raw.push({ title, url: a.href });
-    });
-
-  } else if (host.includes("grok.com")) {
-    document.querySelectorAll('a[href*="/conversation/"]').forEach((a) => {
-      const title = a.innerText.trim();
-      if (title) raw.push({ title, url: a.href });
-    });
-  }
-
-  // Deduplicate by URL, skip current page, return first 5
-  const current = location.href;
-  const seen = new Set();
-  return raw
-    .filter((c) => {
-      if (!c.title || c.url === current || seen.has(c.url)) return false;
-      seen.add(c.url);
-      return true;
-    })
-    .slice(0, 5);
 }
 
 // ── Conversation extraction ───────────────────────────────────────────────────
@@ -157,40 +98,27 @@ function extractConversation() {
 
 function findInput() {
   const host = window.location.hostname;
-  if (host.includes("claude.ai")) {
-    return (
-      document.querySelector("div.ProseMirror[contenteditable='true']") ||
-      document.querySelector("[contenteditable='true']")
-    );
-  }
-  if (host.includes("chatgpt.com") || host.includes("openai.com")) {
-    return (
-      document.querySelector("#prompt-textarea") ||
-      document.querySelector("[contenteditable='true']")
-    );
-  }
-  if (host.includes("gemini.google.com")) {
-    return (
-      document.querySelector(".ql-editor[contenteditable='true']") ||
-      document.querySelector("rich-textarea [contenteditable='true']") ||
-      document.querySelector("[contenteditable='true']")
-    );
-  }
-  return (
-    document.querySelector("textarea") ||
-    document.querySelector("[contenteditable='true']")
-  );
+  if (host.includes("claude.ai"))
+    return document.querySelector("div.ProseMirror[contenteditable='true']") ||
+           document.querySelector("[contenteditable='true']");
+  if (host.includes("chatgpt.com") || host.includes("openai.com"))
+    return document.querySelector("#prompt-textarea") ||
+           document.querySelector("[contenteditable='true']");
+  if (host.includes("gemini.google.com"))
+    return document.querySelector(".ql-editor[contenteditable='true']") ||
+           document.querySelector("rich-textarea [contenteditable='true']") ||
+           document.querySelector("[contenteditable='true']");
+  return document.querySelector("textarea") ||
+         document.querySelector("[contenteditable='true']");
 }
 
 function injectIntoInput(text) {
   const input = findInput();
   if (!input) return false;
   input.focus();
-
   if (input.tagName === "TEXTAREA") {
     const setter = Object.getOwnPropertyDescriptor(
-      window.HTMLTextAreaElement.prototype,
-      "value"
+      window.HTMLTextAreaElement.prototype, "value"
     ).set;
     setter.call(input, text);
     input.dispatchEvent(new Event("input", { bubbles: true }));
@@ -208,71 +136,106 @@ function injectIntoInput(text) {
   return true;
 }
 
-// ── Floating picker banner ────────────────────────────────────────────────────
-// Shown on new (empty) chats when the toggle is ON.
+// ── Cross-LLM banner ──────────────────────────────────────────────────────────
+// Shows on new empty chats. Displays the last 5 conversations from OTHER LLMs
+// so you can continue them here. The user picks one → context is injected.
 
 let bannerMounted = false;
 
-const BANNER_STYLES = `
-  position:fixed;bottom:24px;right:22px;z-index:2147483647;
-  background:#0f0f0f;color:#e8e8e8;
-  border:1px solid #272727;border-radius:14px;
-  padding:16px;font-family:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",sans-serif;
-  font-size:13px;box-shadow:0 16px 48px rgba(0,0,0,.7),0 4px 16px rgba(0,0,0,.4);
-  width:296px;display:flex;flex-direction:column;gap:10px;
-`;
-
-const ITEM_BASE = `
-  background:#161616;border:1px solid #222;border-radius:9px;
-  color:#ccc;padding:9px 12px;cursor:pointer;text-align:left;
-  font-family:inherit;font-size:12px;font-weight:500;
-  display:flex;align-items:center;gap:10px;width:100%;
-  transition:background 0.12s,border-color 0.12s,transform 0.1s;
-`;
-
-function mountPickerBanner(convs) {
-  if (bannerMounted || document.getElementById("llm-picker-banner")) return;
+function mountCrossLLMBanner(otherMemories) {
+  if (bannerMounted || document.getElementById("llm-memory-banner")) return;
   bannerMounted = true;
 
-  const platform = getPlatform();
+  const currentPlatform = getPlatform();
+  const shown = otherMemories.slice(0, 5);
 
   const wrap = document.createElement("div");
-  wrap.id = "llm-picker-banner";
-  wrap.style.cssText = BANNER_STYLES;
+  wrap.id = "llm-memory-banner";
+
+  Object.assign(wrap.style, {
+    position: "fixed",
+    bottom: "24px",
+    right: "22px",
+    zIndex: "2147483647",
+    background: "#0d0d0d",
+    border: "1px solid #252525",
+    borderRadius: "14px",
+    padding: "15px",
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif',
+    fontSize: "13px",
+    boxShadow: "0 20px 60px rgba(0,0,0,.8), 0 4px 16px rgba(0,0,0,.4)",
+    width: "300px",
+    display: "flex",
+    flexDirection: "column",
+    gap: "10px",
+    opacity: "0",
+    transform: "translateY(14px)",
+    transition: "opacity 0.28s ease, transform 0.28s cubic-bezier(0.34,1.3,0.64,1)",
+  });
 
   // Header
   const hdr = document.createElement("div");
-  hdr.style.cssText = "display:flex;justify-content:space-between;align-items:center;";
+  Object.assign(hdr.style, {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+  });
   hdr.innerHTML = `
     <div>
-      <div style="font-weight:700;font-size:13.5px;color:#fff;margin-bottom:1px;">Pick up where you left off</div>
-      <div style="font-size:11px;color:#555;">Recent on ${platform}</div>
+      <div style="font-weight:700;font-size:13.5px;color:#fff;line-height:1.3;">
+        Continue from another AI?
+      </div>
+      <div style="font-size:11px;color:#505050;margin-top:2px;">
+        Recent from your other LLMs
+      </div>
     </div>
-    <button data-action="close" style="background:#1a1a1a;border:1px solid #2a2a2a;color:#666;cursor:pointer;font-size:16px;line-height:1;padding:4px 8px;border-radius:6px;transition:all 0.12s;">×</button>
+    <button id="llm-banner-close" style="
+      background:#1a1a1a;border:1px solid #2c2c2c;color:#555;
+      cursor:pointer;font-size:15px;line-height:1;padding:3px 8px;
+      border-radius:6px;margin-left:8px;flex-shrink:0;
+    ">×</button>
   `;
   wrap.appendChild(hdr);
 
-  // Conversation list
+  // Conversation buttons
   const list = document.createElement("div");
   list.style.cssText = "display:flex;flex-direction:column;gap:4px;";
 
-  if (!convs.length) {
-    const empty = document.createElement("div");
-    empty.style.cssText = "color:#444;font-size:12px;padding:8px 0;text-align:center;";
-    empty.textContent = "No recent conversations found in sidebar.";
-    list.appendChild(empty);
+  if (!shown.length) {
+    const msg = document.createElement("div");
+    msg.style.cssText = "font-size:12px;color:#444;text-align:center;padding:8px 0;";
+    msg.textContent = "No saved conversations yet. Use other AI tools and they'll appear here.";
+    list.appendChild(msg);
   } else {
-    convs.forEach((conv, i) => {
+    shown.forEach((mem, i) => {
       const btn = document.createElement("button");
-      btn.style.cssText = ITEM_BASE;
+      Object.assign(btn.style, {
+        background: "#161616",
+        border: "1px solid #222",
+        borderRadius: "9px",
+        color: "#ccc",
+        padding: "9px 11px",
+        cursor: "pointer",
+        textAlign: "left",
+        fontFamily: "inherit",
+        fontSize: "12px",
+        display: "flex",
+        alignItems: "center",
+        gap: "9px",
+        width: "100%",
+        transition: "background 0.12s, border-color 0.12s, transform 0.1s",
+      });
       btn.innerHTML = `
-        <span style="font-size:10px;font-weight:800;color:#333;width:14px;text-align:center;flex-shrink:0;">${i + 1}</span>
-        <span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${conv.title}</span>
+        <span style="font-size:10px;font-weight:800;color:#3a3a3a;width:12px;text-align:center;flex-shrink:0;">${i + 1}</span>
+        <div style="flex:1;min-width:0;">
+          <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500;color:#d5d5d5;">${mem.title}</div>
+          <div style="font-size:10.5px;color:#444;margin-top:2px;">${mem.platform} · ${mem.timestamp}</div>
+        </div>
         <span style="font-size:11px;color:#333;flex-shrink:0;">→</span>
       `;
       btn.addEventListener("mouseenter", () => {
         btn.style.background = "#1e1e1e";
-        btn.style.borderColor = "#3a3a3a";
+        btn.style.borderColor = "#383838";
         btn.style.transform = "translateX(2px)";
       });
       btn.addEventListener("mouseleave", () => {
@@ -281,22 +244,32 @@ function mountPickerBanner(convs) {
         btn.style.transform = "translateX(0)";
       });
       btn.addEventListener("click", () => {
+        const briefing = buildBriefing(mem);
+        const ok = injectIntoInput(briefing);
         wrap.remove();
-        if (conv.url) window.location.href = conv.url;
+        if (!ok) navigator.clipboard.writeText(briefing);
+        chrome.runtime.sendMessage({ type: "BUMP_ANALYTIC", key: "injects" });
       });
       list.appendChild(btn);
     });
   }
   wrap.appendChild(list);
 
-  // Random button (only if there are convs)
-  if (convs.length > 1) {
+  // Random button
+  if (shown.length > 1) {
     const randomBtn = document.createElement("button");
-    randomBtn.style.cssText = `
-      background:none;border:1px solid #222;color:#555;border-radius:7px;
-      padding:7px;font-size:12px;font-weight:600;cursor:pointer;
-      font-family:inherit;transition:all 0.12s;
-    `;
+    Object.assign(randomBtn.style, {
+      background: "none",
+      border: "1px solid #222",
+      color: "#555",
+      borderRadius: "7px",
+      padding: "7px",
+      fontSize: "12px",
+      fontWeight: "600",
+      cursor: "pointer",
+      fontFamily: "inherit",
+      transition: "all 0.12s",
+    });
     randomBtn.textContent = "↻  Pick random";
     randomBtn.addEventListener("mouseenter", () => {
       randomBtn.style.borderColor = "#fff";
@@ -307,29 +280,27 @@ function mountPickerBanner(convs) {
       randomBtn.style.color = "#555";
     });
     randomBtn.addEventListener("click", () => {
-      const pick = convs[Math.floor(Math.random() * convs.length)];
+      const pick = shown[Math.floor(Math.random() * shown.length)];
+      const briefing = buildBriefing(pick);
+      const ok = injectIntoInput(briefing);
       wrap.remove();
-      if (pick.url) window.location.href = pick.url;
+      if (!ok) navigator.clipboard.writeText(briefing);
+      chrome.runtime.sendMessage({ type: "BUMP_ANALYTIC", key: "injects" });
     });
     wrap.appendChild(randomBtn);
   }
 
-  wrap.addEventListener("click", (e) => {
-    if (e.target.closest("[data-action='close']")) wrap.remove();
-  });
+  wrap.querySelector("#llm-banner-close").addEventListener("click", () => wrap.remove());
 
-  // Animate in
-  wrap.style.opacity = "0";
-  wrap.style.transform = "translateY(12px)";
-  wrap.style.transition = "opacity 0.25s ease, transform 0.25s cubic-bezier(0.34,1.3,0.64,1)";
   document.body.appendChild(wrap);
+  // Animate in
   requestAnimationFrame(() => {
     wrap.style.opacity = "1";
     wrap.style.transform = "translateY(0)";
   });
 }
 
-// ── SPA navigation ────────────────────────────────────────────────────────────
+// ── SPA navigation ─────────────────────────────────────────────────────────────
 
 let currentUrl = location.href;
 
@@ -346,27 +317,30 @@ history.pushState = (...args) => { _pushState(...args); onUrlChange(); };
 history.replaceState = (...args) => { _replaceState(...args); onUrlChange(); };
 window.addEventListener("popstate", onUrlChange);
 
-// ── Banner trigger logic ──────────────────────────────────────────────────────
+// ── Banner trigger ─────────────────────────────────────────────────────────────
 
 function waitForReadyThenBanner() {
-  if (extractConversation().length > 0) return; // existing conversation — skip
+  if (extractConversation().length > 0) return; // existing chat — skip
 
   chrome.storage.local.get("llm_picker_enabled", ({ llm_picker_enabled: isOn }) => {
-    if (!isOn) return; // feature is toggled off
+    if (!isOn) return;
 
     let resolved = false;
-
     const done = (isNewChat) => {
       if (resolved) return;
       resolved = true;
       observer.disconnect();
       if (!isNewChat) return;
 
-      // Give sidebar a moment to load, then scrape
-      setTimeout(() => {
-        const convs = getRecentConversations();
-        mountPickerBanner(convs);
-      }, 800);
+      // Load stored memories, filter to OTHER platforms, show banner
+      chrome.runtime.sendMessage({ type: "GET_MEMORIES" }, (res) => {
+        if (chrome.runtime.lastError || !res?.success) return;
+        const currentPlatform = getPlatform();
+        const others = (res.data || [])
+          .filter((m) => m.platform !== currentPlatform)
+          .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+        mountCrossLLMBanner(others);
+      });
     };
 
     const observer = new MutationObserver(() => {
@@ -377,10 +351,10 @@ function waitForReadyThenBanner() {
   });
 }
 
-// ── Auto-save ─────────────────────────────────────────────────────────────────
+// ── Auto-save ──────────────────────────────────────────────────────────────────
 
 let autoSaveCount = 0;
-let autoSaveUrl = "";
+let autoSaveUrl   = "";
 
 const autoSaveTimer = setInterval(() => {
   try {
@@ -411,7 +385,7 @@ const autoSaveTimer = setInterval(() => {
       if (chrome.runtime.lastError) { clearInterval(autoSaveTimer); return; }
       if (res?.success) {
         autoSaveCount = messages.length;
-        autoSaveUrl = location.href;
+        autoSaveUrl   = location.href;
       }
     });
   } catch (_) {
@@ -419,7 +393,7 @@ const autoSaveTimer = setInterval(() => {
   }
 }, 30000);
 
-// ── Init ──────────────────────────────────────────────────────────────────────
+// ── Init ───────────────────────────────────────────────────────────────────────
 
 if (getPlatform()) {
   if (document.readyState === "complete") {
@@ -429,14 +403,9 @@ if (getPlatform()) {
   }
 }
 
-// ── Message listener ──────────────────────────────────────────────────────────
+// ── Message listener ───────────────────────────────────────────────────────────
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (message.type === "GET_RECENT_CONVERSATIONS") {
-    const conversations = getRecentConversations();
-    sendResponse({ success: true, conversations, platform: getPlatform() });
-    return true;
-  }
   if (message.type === "GET_CONVERSATION") {
     sendResponse({ success: true, messages: extractConversation(), platform: getPlatform() });
     return true;
