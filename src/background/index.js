@@ -1,6 +1,6 @@
 import { makeTitle } from "../utils/shared.js";
 
-const FREE_LIMIT = 5;
+const FREE_LIMIT = 100;
 
 // ── Cross-device sync ─────────────────────────────────────────────────────────
 // Stores a compressed snapshot in chrome.storage.sync so memories survive
@@ -240,6 +240,94 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       syncToCloud(merged);
       sendResponse({ success: true, imported: newOnes.length });
     })();
+    return true;
+  }
+
+  // ── Sync sidebar conversations from all LLMs ──────────────────────────────
+  // Opens each LLM in a background tab, waits for the page to load + sidebar
+  // to render, scrapes conversation links, caches in storage, then closes tab.
+  if (message.type === "SYNC_SIDEBARS") {
+    (async () => {
+      const SEED_URLS = {
+        Claude:   "https://claude.ai/new",
+        ChatGPT:  "https://chatgpt.com",
+        Grok:     "https://grok.com",
+        Gemini:   "https://gemini.google.com/app",
+        DeepSeek: "https://chat.deepseek.com",
+      };
+
+      const targets = message.platforms || Object.keys(SEED_URLS);
+      const results = {};
+
+      for (const name of targets) {
+        const seedUrl = SEED_URLS[name];
+        if (!seedUrl) continue;
+
+        // Update progress
+        const { llm_sidebar_cache: cur = {} } =
+          await chrome.storage.local.get("llm_sidebar_cache");
+        await chrome.storage.local.set({
+          llm_sidebar_cache: { ...cur, [name]: cur[name] || [] },
+          llm_sync_progress: { ...cur, [name]: "loading" },
+        });
+
+        let tab;
+        try {
+          tab = await chrome.tabs.create({ url: seedUrl, active: false });
+
+          // Wait for tab to reach "complete" status
+          await new Promise((res) => {
+            const onUpdated = (id, info) => {
+              if (id === tab.id && info.status === "complete") {
+                chrome.tabs.onUpdated.removeListener(onUpdated);
+                res();
+              }
+            };
+            chrome.tabs.onUpdated.addListener(onUpdated);
+            setTimeout(res, 15000); // 15s max wait
+          });
+
+          // Extra wait for sidebar JS to render (SPAs need time)
+          await new Promise((r) => setTimeout(r, 3000));
+
+          // Scrape sidebar
+          const res = await new Promise((r) => {
+            chrome.tabs.sendMessage(
+              tab.id,
+              { type: "GET_SIDEBAR_CONVERSATIONS" },
+              (response) => {
+                if (chrome.runtime.lastError) r({ conversations: [] });
+                else r(response || { conversations: [] });
+              }
+            );
+          });
+
+          results[name] = res.conversations || [];
+        } catch (_) {
+          results[name] = [];
+        } finally {
+          if (tab) chrome.tabs.remove(tab.id).catch(() => {});
+        }
+
+        // Persist after each platform so partial results show up
+        const { llm_sidebar_cache: existing = {} } =
+          await chrome.storage.local.get("llm_sidebar_cache");
+        await chrome.storage.local.set({
+          llm_sidebar_cache: { ...existing, [name]: results[name] },
+          llm_sync_progress: null,
+        });
+      }
+
+      sendResponse({ success: true, results });
+    })();
+    return true;
+  }
+
+  // ── Get cached sidebar ────────────────────────────────────────────────────
+  if (message.type === "GET_SIDEBAR_CACHE") {
+    chrome.storage.local.get("llm_sidebar_cache", (result) => {
+      sendResponse({ success: true, data: result.llm_sidebar_cache || {} });
+    });
     return true;
   }
 });
