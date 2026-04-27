@@ -537,6 +537,109 @@ body {
 .sync-status-dot.done     { background: #5a5a5a; }
 .sync-name { color: var(--text2); }
 
+/* ── Checkbox ── */
+.conv-check {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  cursor: pointer;
+  margin-right: 1px;
+}
+.conv-check input { display: none; }
+.check-box {
+  width: 15px;
+  height: 15px;
+  border: 1.5px solid var(--text3);
+  border-radius: 4px;
+  background: transparent;
+  transition: all 0.13s var(--ease);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.conv-check input:checked ~ .check-box {
+  background: var(--white);
+  border-color: var(--white);
+}
+.conv-check input:checked ~ .check-box::after {
+  content: '';
+  width: 4px;
+  height: 7px;
+  border: 2px solid var(--bg);
+  border-top: none;
+  border-left: none;
+  transform: rotate(45deg) translateY(-1px);
+  display: block;
+}
+/* Only show checkboxes on hover or when checked */
+.conv-check { opacity: 0; transition: opacity 0.12s; }
+.conv-item:hover .conv-check,
+.conv-item.selected .conv-check { opacity: 1; }
+
+/* Selected item highlight */
+.conv-item.selected {
+  border-color: var(--border2);
+  background: var(--surface2);
+}
+.conv-item.selected .conv-title { color: var(--white); }
+
+/* ── Selection bar ── */
+.selection-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: var(--r);
+  padding: 9px 12px;
+  animation: slideUp 0.2s var(--spring) both;
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.selection-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.selection-count {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--white);
+}
+.btn-clear-sel {
+  background: none;
+  border: 1px solid var(--border2);
+  color: var(--text2);
+  border-radius: var(--r-sm);
+  padding: 3px 9px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.12s;
+  font-family: inherit;
+}
+.btn-clear-sel:hover { border-color: var(--white); color: var(--white); }
+
+.btn-use-sel {
+  background: var(--white);
+  border: none;
+  color: var(--bg);
+  border-radius: var(--r-sm);
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.13s var(--ease);
+  font-family: inherit;
+  white-space: nowrap;
+}
+.btn-use-sel:hover { opacity: 0.88; transform: scale(1.02); }
+.btn-use-sel:active { transform: scale(0.97); }
+
 /* ── Toast ── */
 .toast {
   font-size: 12px;

@@ -56,6 +56,26 @@ export function buildBriefing(memory) {
   );
 }
 
+export function buildMergedBriefing(memories) {
+  const parts = memories.map((mem, i) => {
+    const header = `${"=".repeat(50)}\nContext ${i + 1} of ${memories.length} — ${mem.platform}: ${mem.title}\n${"=".repeat(50)}`;
+    const msgs = trimMessages(mem.messages);
+    const body = msgs
+      .map((m) => {
+        if (m.role === "system") return m.content;
+        return `${m.role === "user" ? "User" : "Assistant"}: ${m.content}`;
+      })
+      .join("\n\n");
+    return `${header}\n[From ${mem.platform} — ${mem.timestamp}]\n\n${body}`;
+  });
+
+  return (
+    `[You have ${memories.length} conversation contexts from different AI tools. Read all of them before responding.]\n\n` +
+    parts.join("\n\n\n") +
+    `\n\n[Acknowledge all ${memories.length} contexts, synthesize the key insights, and continue from here.]`
+  );
+}
+
 export function buildSummary(memory) {
   if (memory.isSnippet) return buildBriefing(memory);
 

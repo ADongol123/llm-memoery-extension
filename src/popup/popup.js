@@ -1,4 +1,4 @@
-import { buildBriefing, buildSummary } from "../utils/shared.js";
+import { buildBriefing, buildSummary, buildMergedBriefing } from "../utils/shared.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -17,6 +17,10 @@ const searchInput    = $("searchInput");
 const clearSearch    = $("clearSearch");
 const modeFullBtn    = $("modeFullBtn");
 const modeSummaryBtn = $("modeSummaryBtn");
+const selectionBar   = $("selectionBar");
+const selectionCount = $("selectionCount");
+const clearSelection = $("clearSelection");
+const useSelected    = $("useSelected");
 
 // Fixed 5 LLMs — always show all tabs regardless of data
 const LLMS = [
@@ -33,6 +37,9 @@ let activeTab    = "All";
 let searchQuery  = "";
 let injectMode   = "full";
 let currentItems = [];
+
+// Multi-select: Set of memory IDs
+const selectedIds = new Set();
 
 // ── Toast ──────────────────────────────────────────────────────────────────────
 
@@ -353,49 +360,116 @@ function appendLabel(text) {
   convList.appendChild(el);
 }
 
+// ── Selection helpers ──────────────────────────────────────────────────────────
+
+function updateSelectionBar() {
+  const count = selectedIds.size;
+  if (count === 0) {
+    selectionBar.classList.add("hidden");
+    return;
+  }
+  selectionBar.classList.remove("hidden");
+  selectionCount.textContent = `${count} selected`;
+  useSelected.textContent = `Use all ${count} →`;
+}
+
+function toggleSelect(mem, el) {
+  if (selectedIds.has(mem.id)) {
+    selectedIds.delete(mem.id);
+    el.classList.remove("selected");
+    el.querySelector(".check-input").checked = false;
+  } else {
+    selectedIds.add(mem.id);
+    el.classList.add("selected");
+    el.querySelector(".check-input").checked = true;
+  }
+  updateSelectionBar();
+}
+
+function clearAll() {
+  selectedIds.clear();
+  convList.querySelectorAll(".conv-item.selected").forEach((el) => {
+    el.classList.remove("selected");
+    const cb = el.querySelector(".check-input");
+    if (cb) cb.checked = false;
+  });
+  updateSelectionBar();
+}
+
 // ── Build conv item ────────────────────────────────────────────────────────────
 
 function makeItem(item, num) {
   const { title, url, mem, platform, tabId } = item;
-  const injectable = !!mem && !mem.isSnippet || !!mem?.isSnippet;
-  const isSnippet  = !!mem?.isSnippet;
-  const isPinned   = !!mem?.pinned;
+  const injectable   = !!mem;
+  const isSnippet    = !!mem?.isSnippet;
+  const isPinned     = !!mem?.pinned;
+  const isSelected   = mem && selectedIds.has(mem.id);
   const showPlatform = activeTab === "All";
 
   const el = document.createElement("div");
-  el.className = "conv-item" + (isPinned ? " pinned" : "") + (!injectable ? " nav-only" : "");
+  el.className = [
+    "conv-item",
+    isPinned   ? "pinned"   : "",
+    !injectable ? "nav-only" : "",
+    isSelected  ? "selected" : "",
+  ].filter(Boolean).join(" ");
   el.style.animationDelay = `${Math.min(num - 1, 8) * 0.03}s`;
-  el.title = injectable
-    ? `Click to inject into current LLM (${injectMode} mode)`
-    : "Click to open this conversation";
 
-  const msgCount = mem && !isSnippet ? `<span>·</span><span>${mem.messages.length} msgs</span>` : "";
+  const msgCount      = mem && !isSnippet ? `<span>·</span><span>${mem.messages.length} msgs</span>` : "";
   const platformBadge = showPlatform ? `<span class="platform-badge">${platform}</span>` : "";
   const snippetBadge  = isSnippet    ? `<span class="snippet-badge">snippet</span>` : "";
-  const pinBtn = injectable ? `<button class="pin-btn" title="${isPinned ? "Unpin" : "Pin"}">${isPinned ? "★" : "☆"}</button>` : `<span style="width:16px;flex-shrink:0;"></span>`;
-  const actionIcon = injectable ? `<span class="conv-arrow">→</span>` : `<span class="nav-arrow">↗</span>`;
+  const pinBtn        = injectable
+    ? `<button class="pin-btn" title="${isPinned ? "Unpin" : "Pin"}">${isPinned ? "★" : "☆"}</button>`
+    : `<span style="width:16px;flex-shrink:0;"></span>`;
+  const actionIcon    = injectable
+    ? `<span class="conv-arrow">→</span>`
+    : `<span class="nav-arrow">↗</span>`;
+  const checkbox      = injectable
+    ? `<label class="conv-check" title="Select to combine with others">
+         <input type="checkbox" class="check-input" ${isSelected ? "checked" : ""}/>
+         <span class="check-box"></span>
+       </label>`
+    : "";
 
   el.innerHTML = `
+    ${checkbox}
     <span class="conv-num">${num}</span>
     ${pinBtn}
     <div class="conv-body">
       <div class="conv-title" title="${title}">${title}</div>
       <div class="conv-meta">
         ${platformBadge}${snippetBadge}
-        ${mem ? `<span>${mem.timestamp}</span>${msgCount}` : `<span class="sidebar-label">from sidebar</span>`}
+        ${mem
+          ? `<span>${mem.timestamp}</span>${msgCount}`
+          : `<span class="sidebar-label">from sidebar</span>`}
       </div>
     </div>
     ${actionIcon}
   `;
 
   if (injectable) {
+    // Checkbox toggles selection; doesn't inject
+    el.querySelector(".conv-check").addEventListener("click", (e) => {
+      e.stopPropagation();
+      toggleSelect(mem, el);
+    });
+
     el.querySelector(".pin-btn")?.addEventListener("click", (e) => {
       e.stopPropagation();
       togglePin(mem);
     });
-    el.addEventListener("click", () => injectMemory(mem, el));
+
+    // Row click: if nothing selected yet → inject immediately.
+    //            If items are already selected → add this one to selection.
+    el.addEventListener("click", (e) => {
+      if (e.target.closest(".conv-check, .pin-btn")) return;
+      if (selectedIds.size > 0) {
+        toggleSelect(mem, el);
+      } else {
+        injectMemory(mem, el);
+      }
+    });
   } else {
-    // Navigate to the conversation
     el.addEventListener("click", () => navigateTo(url, tabId));
   }
 
@@ -515,5 +589,41 @@ modeFullBtn.addEventListener("click",    () => setMode("full"));
 modeSummaryBtn.addEventListener("click", () => setMode("summary"));
 randomBtn.addEventListener("click", pickRandom);
 syncBtn.addEventListener("click", syncAll);
+clearSelection.addEventListener("click", clearAll);
+
+useSelected.addEventListener("click", () => {
+  if (!selectedIds.size) return;
+
+  // Collect the full memory objects for all selected IDs
+  const allStored = LLMS.flatMap((llm) => platformData[llm.name]?.stored || []);
+  const selected  = [...selectedIds]
+    .map((id) => allStored.find((m) => m.id === id))
+    .filter(Boolean);
+
+  if (!selected.length) { showToast("No injectable items selected"); return; }
+
+  // Build merged or single briefing
+  const text = selected.length === 1
+    ? (injectMode === "summary" ? buildSummary(selected[0]) : buildBriefing(selected[0]))
+    : buildMergedBriefing(selected);
+
+  chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
+    if (!tab) { copyFallback(text); return; }
+    chrome.tabs.sendMessage(tab.id, { type: "INJECT_CONTEXT", text }, (res) => {
+      if (chrome.runtime.lastError || !res?.success) {
+        copyFallback(text);
+      } else {
+        chrome.runtime.sendMessage({ type: "BUMP_ANALYTIC", key: "injects" });
+        selectedIds.clear();
+        showToast(
+          selected.length === 1
+            ? "Context injected ✓"
+            : `${selected.length} conversations merged & injected ✓`
+        );
+        setTimeout(() => window.close(), 900);
+      }
+    });
+  });
+});
 
 init();

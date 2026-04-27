@@ -70,9 +70,18 @@
         <!-- Bottom row -->
         <div class="bottom-row">
           <button id="randomBtn" class="btn-random">↻  Random</button>
-          <button id="syncBtn" class="btn-sync" title="Open each LLM briefly in background to fetch your conversations">⟳  Sync all</button>
+          <button id="syncBtn" class="btn-sync" title="Open each LLM briefly to fetch your conversations">⟳  Sync all</button>
         </div>
 
+      </div>
+
+      <!-- Selection bar — slides up when items are checked -->
+      <div id="selectionBar" class="selection-bar hidden">
+        <div class="selection-left">
+          <span id="selectionCount" class="selection-count">0 selected</span>
+          <button id="clearSelection" class="btn-clear-sel">Clear</button>
+        </div>
+        <button id="useSelected" class="btn-use-sel">Use selected →</button>
       </div>
 
       <!-- Toast -->
