@@ -16,10 +16,10 @@
         <span class="logo-text">LLM Memory</span>
       </div>
       <div class="header-right">
-        <div class="toggle-wrap">
-          <span class="toggle-label" id="statusText">Off</span>
+        <div class="toggle-wrap" title="Auto-save on/off">
+          <span class="toggle-label" id="statusText">Saving</span>
           <label class="toggle">
-            <input type="checkbox" id="toggleInput" />
+            <input type="checkbox" id="toggleInput" checked />
             <span class="toggle-slider"></span>
           </label>
         </div>
@@ -27,15 +27,11 @@
       </div>
     </header>
 
-    <!-- Off state -->
-    <div id="offState" class="off-state">
-      <div class="off-icon">⬡</div>
-      <div class="off-title">LLM Memory is off</div>
-      <div class="off-sub">Toggle to start saving conversations across Claude, ChatGPT, Gemini, Grok and DeepSeek.</div>
-    </div>
+    <!-- Off state (kept for compatibility but hidden) -->
+    <div id="offState" class="off-state hidden"></div>
 
-    <!-- Main panel -->
-    <div id="mainPanel" class="hidden">
+    <!-- Main panel always visible -->
+    <div id="mainPanel">
 
       <!-- Search -->
       <div class="search-wrap">
@@ -65,6 +61,11 @@
           <button id="clearSelection" class="sel-btn">Clear</button>
           <button id="useSelected"    class="sel-btn primary">Use selected →</button>
         </div>
+      </div>
+
+      <!-- Select hint (shown when no items selected) -->
+      <div id="selectHint" class="select-hint hidden">
+        ☑ Check conversations to select, then use them together
       </div>
 
       <!-- List -->

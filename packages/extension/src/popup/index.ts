@@ -59,6 +59,7 @@ const confirmModal   = $("confirmModal");
 const confirmList    = $("confirmList");
 const confirmCancel  = $("confirmCancel");
 const confirmInject  = $("confirmInject");
+const selectHint     = $("selectHint");
 
 // Settings panel
 const autoSaveToggle = $<HTMLInputElement>("autoSaveToggle");
@@ -148,6 +149,10 @@ function render(): void {
   if (viewMode === "conversations") renderConversations();
   else renderPackages();
   updateSelectionBar();
+
+  // Show selection hint only when there are conversations and nothing is selected
+  const hasItems = conversations.length > 0 || Object.keys(sidebarCache).length > 0;
+  selectHint.classList.toggle("hidden", !hasItems || selectedItems.size > 0 || viewMode !== "conversations");
 }
 
 function renderTabs(): void {
@@ -260,18 +265,28 @@ function renderEmpty(): void {
   empty.className = "empty-state";
 
   if (searchQuery) {
-    empty.innerHTML = `<div>No results for "${searchQuery}"</div>`;
+    empty.innerHTML = `<div class="empty-icon">⊘</div><div>No results for "${escHtml(searchQuery)}"</div>`;
   } else if (activeTab !== "All") {
     empty.innerHTML = `
       <div class="empty-icon">↗</div>
-      <div>Open <strong>${activeTab}</strong> to see conversations here.</div>
-      <div class="empty-hint">Conversations auto-save while you chat.</div>
+      <div style="font-weight:600;">No ${activeTab} conversations yet</div>
+      <div class="empty-hint">Open ${activeTab}, start a chat with a few messages, and they'll appear here automatically.</div>
+      <div class="empty-hint" style="margin-top:6px;">Or click <strong>⟳ Sync</strong> to scan your open tabs now.</div>
     `;
   } else {
     empty.innerHTML = `
       <div class="empty-icon">⬡</div>
-      <div>No conversations yet.</div>
-      <div class="empty-hint">Open any supported LLM and start chatting.</div>
+      <div style="font-weight:600;">No conversations saved yet</div>
+      <div class="empty-hint" style="margin-top:8px;">
+        <strong>How to get started:</strong>
+      </div>
+      <ol class="empty-steps">
+        <li>Open Claude, ChatGPT, Gemini, Grok, or DeepSeek</li>
+        <li>Have a conversation (4+ messages)</li>
+        <li>Conversations auto-save every 30 seconds</li>
+        <li>Come back here, select one or more, then click <strong>Use selected →</strong></li>
+      </ol>
+      <div class="empty-hint" style="margin-top:10px;">Already chatting? Click <strong>⟳ Sync</strong> above to import now.</div>
     `;
   }
 
@@ -646,18 +661,10 @@ async function saveSettingsNow(): Promise<void> {
 
 toggleInput.addEventListener("change", async () => {
   const isOn = toggleInput.checked;
-  statusText.textContent = isOn ? "On" : "Off";
+  statusText.textContent = isOn ? "Saving" : "Paused";
   settings.autoSaveEnabled = isOn;
-  await send({ type: "SAVE_SETTINGS", settings: { ...settings, pickerEnabled: isOn } });
-
-  if (isOn) {
-    offState.classList.add("hidden");
-    mainPanel.classList.remove("hidden");
-    await loadAll();
-  } else {
-    mainPanel.classList.add("hidden");
-    offState.classList.remove("hidden");
-  }
+  await send({ type: "SAVE_SETTINGS", settings });
+  showToast(isOn ? "Auto-save on" : "Auto-save paused");
 });
 
 settingsBtn.addEventListener("click", showSettings);
@@ -763,17 +770,15 @@ function escHtml(str: string): string {
 // ── Init ───────────────────────────────────────────────────────────────────────
 
 async function init(): Promise<void> {
-  const settings = await send<{ success: boolean; data: ExtensionSettings }>({ type: "GET_SETTINGS" });
-  const isOn = settings.data?.pickerEnabled ?? false;
+  // Main panel is always visible — the toggle only controls auto-save
+  offState.classList.add("hidden");
+  mainPanel.classList.remove("hidden");
 
-  toggleInput.checked    = isOn;
-  statusText.textContent = isOn ? "On" : "Off";
+  await loadAll();
 
-  if (isOn) {
-    offState.classList.add("hidden");
-    mainPanel.classList.remove("hidden");
-    await loadAll();
-  }
+  // Sync toggle state to stored auto-save setting
+  toggleInput.checked    = settings.autoSaveEnabled !== false;
+  statusText.textContent = toggleInput.checked ? "Saving" : "Paused";
 }
 
 init().catch(console.error);
