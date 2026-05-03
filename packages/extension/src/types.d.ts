@@ -1,0 +1,3 @@
+export type { Platform, BriefingMode, Message, CodeBlock, ConversationEntities, Conversation, ContextPackage, ContextPackageDocument, PackageSource, InjectionLog, Workspace, PlatformSelectors, SelectorRegistry, SidebarItem, AuthSession, ExtensionMessage, ExtensionSettings, } from "@llm-memory/shared";
+export { DEFAULT_SETTINGS, buildBriefing, buildMergedBriefing, buildPackageBriefing, makeTitle, trimMessages } from "@llm-memory/shared";
+//# sourceMappingURL=types.d.ts.map

@@ -572,10 +572,8 @@ body {
   transform: rotate(45deg) translateY(-1px);
   display: block;
 }
-/* Only show checkboxes on hover or when checked */
-.conv-check { opacity: 0; transition: opacity 0.12s; }
-.conv-item:hover .conv-check,
-.conv-item.selected .conv-check { opacity: 1; }
+/* Always visible */
+.conv-check { opacity: 1; }
 
 /* Selected item highlight */
 .conv-item.selected {

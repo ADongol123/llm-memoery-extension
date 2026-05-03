@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LLM Memory</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div id="app">
+
+    <!-- Header -->
+    <header class="header">
+      <div class="header-left">
+        <span class="logo">⬡</span>
+        <span class="logo-text">LLM Memory</span>
+      </div>
+      <div class="header-right">
+        <div class="toggle-wrap">
+          <span class="toggle-label" id="statusText">Off</span>
+          <label class="toggle">
+            <input type="checkbox" id="toggleInput" />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <button class="icon-btn" id="settingsBtn" title="Settings">⚙</button>
+      </div>
+    </header>
+
+    <!-- Off state -->
+    <div id="offState" class="off-state">
+      <div class="off-icon">⬡</div>
+      <div class="off-title">LLM Memory is off</div>
+      <div class="off-sub">Toggle to start saving conversations across Claude, ChatGPT, Gemini, Grok and DeepSeek.</div>
+    </div>
+
+    <!-- Main panel -->
+    <div id="mainPanel" class="hidden">
+
+      <!-- Search -->
+      <div class="search-wrap">
+        <input type="text" id="searchInput" class="search-input" placeholder="Search conversations…" />
+        <button id="clearSearch" class="clear-search hidden">×</button>
+      </div>
+
+      <!-- Tab bar -->
+      <div id="tabBar" class="tab-bar"></div>
+
+      <!-- Mode toggle -->
+      <div class="mode-bar">
+        <button id="modeConvBtn"  class="mode-btn active">Conversations</button>
+        <button id="modePkgBtn"   class="mode-btn">Packages</button>
+      </div>
+
+      <!-- Action bar -->
+      <div class="action-bar">
+        <button id="generatePkgBtn" class="action-btn hidden">⊕ Generate Package</button>
+        <button id="syncBtn"        class="action-btn">⟳ Sync</button>
+      </div>
+
+      <!-- Selection bar (shown when items are checked) -->
+      <div id="selectionBar" class="selection-bar hidden">
+        <span id="selectionCount">0 selected</span>
+        <div class="sel-actions">
+          <button id="clearSelection" class="sel-btn">Clear</button>
+          <button id="useSelected"    class="sel-btn primary">Use selected →</button>
+        </div>
+      </div>
+
+      <!-- List -->
+      <div id="itemList" class="item-list"></div>
+
+    </div>
+
+    <!-- Settings panel (hidden by default) -->
+    <div id="settingsPanel" class="hidden settings-panel">
+      <div class="settings-header">
+        <button id="settingsBack" class="back-btn">← Back</button>
+        <span class="settings-title">Settings</span>
+      </div>
+
+      <div class="settings-body">
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Auto-save conversations</div>
+            <div class="setting-sub">Saves every 30s while chatting</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="autoSaveToggle" />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Show picker banner</div>
+            <div class="setting-sub">Suggest continuing on new chats</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="pickerToggle" />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-divider"></div>
+
+        <div class="auth-section" id="authSection">
+          <div class="setting-label">Account</div>
+          <div id="authSignedOut">
+            <div class="setting-sub">Sign in to sync across devices and enable AI-powered Context Packages.</div>
+            <div class="email-row">
+              <input type="email" id="emailInput" class="email-input" placeholder="your@email.com" />
+              <button id="signInBtn" class="sign-in-btn">Send link</button>
+            </div>
+            <div id="signInMsg" class="sign-in-msg hidden"></div>
+          </div>
+          <div id="authSignedIn" class="hidden">
+            <div class="signed-in-email" id="signedInEmail"></div>
+            <button id="signOutBtn" class="sign-out-btn">Sign out</button>
+          </div>
+        </div>
+
+        <div class="setting-divider"></div>
+
+        <div class="danger-zone">
+          <button id="clearAllBtn" class="danger-btn">Clear all conversations</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="toast hidden"></div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

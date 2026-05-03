@@ -38,8 +38,12 @@ let searchQuery  = "";
 let injectMode   = "full";
 let currentItems = [];
 
-// Multi-select: Set of memory IDs
-const selectedIds = new Set();
+// Multi-select: Map<key, item>  (key = mem.id for stored, url for sidebar-only)
+const selectedItems = new Map();
+
+function selectionKey(item) {
+  return item.mem?.id || item.url || item.title;
+}
 
 // ── Toast ──────────────────────────────────────────────────────────────────────
 
@@ -363,31 +367,32 @@ function appendLabel(text) {
 // ── Selection helpers ──────────────────────────────────────────────────────────
 
 function updateSelectionBar() {
-  const count = selectedIds.size;
-  if (count === 0) {
-    selectionBar.classList.add("hidden");
-    return;
+  const count = selectedItems.size;
+  selectionBar.classList.toggle("hidden", count === 0);
+  if (count > 0) {
+    selectionCount.textContent = `${count} selected`;
+    useSelected.textContent    = `Use all ${count} →`;
   }
-  selectionBar.classList.remove("hidden");
-  selectionCount.textContent = `${count} selected`;
-  useSelected.textContent = `Use all ${count} →`;
 }
 
-function toggleSelect(mem, el) {
-  if (selectedIds.has(mem.id)) {
-    selectedIds.delete(mem.id);
+function toggleSelect(item, el) {
+  const key = selectionKey(item);
+  if (selectedItems.has(key)) {
+    selectedItems.delete(key);
     el.classList.remove("selected");
-    el.querySelector(".check-input").checked = false;
+    const cb = el.querySelector(".check-input");
+    if (cb) cb.checked = false;
   } else {
-    selectedIds.add(mem.id);
+    selectedItems.set(key, item);
     el.classList.add("selected");
-    el.querySelector(".check-input").checked = true;
+    const cb = el.querySelector(".check-input");
+    if (cb) cb.checked = true;
   }
   updateSelectionBar();
 }
 
 function clearAll() {
-  selectedIds.clear();
+  selectedItems.clear();
   convList.querySelectorAll(".conv-item.selected").forEach((el) => {
     el.classList.remove("selected");
     const cb = el.querySelector(".check-input");
@@ -400,18 +405,18 @@ function clearAll() {
 
 function makeItem(item, num) {
   const { title, url, mem, platform, tabId } = item;
+  const key          = selectionKey(item);
   const injectable   = !!mem;
   const isSnippet    = !!mem?.isSnippet;
   const isPinned     = !!mem?.pinned;
-  const isSelected   = mem && selectedIds.has(mem.id);
+  const isSelected   = selectedItems.has(key);
   const showPlatform = activeTab === "All";
 
   const el = document.createElement("div");
   el.className = [
     "conv-item",
-    isPinned   ? "pinned"   : "",
-    !injectable ? "nav-only" : "",
-    isSelected  ? "selected" : "",
+    isPinned  ? "pinned"   : "",
+    isSelected ? "selected" : "",
   ].filter(Boolean).join(" ");
   el.style.animationDelay = `${Math.min(num - 1, 8) * 0.03}s`;
 
@@ -420,16 +425,17 @@ function makeItem(item, num) {
   const snippetBadge  = isSnippet    ? `<span class="snippet-badge">snippet</span>` : "";
   const pinBtn        = injectable
     ? `<button class="pin-btn" title="${isPinned ? "Unpin" : "Pin"}">${isPinned ? "★" : "☆"}</button>`
-    : `<span style="width:16px;flex-shrink:0;"></span>`;
-  const actionIcon    = injectable
+    : `<span style="width:14px;flex-shrink:0;"></span>`;
+  const actionIcon = injectable
     ? `<span class="conv-arrow">→</span>`
     : `<span class="nav-arrow">↗</span>`;
-  const checkbox      = injectable
-    ? `<label class="conv-check" title="Select to combine with others">
-         <input type="checkbox" class="check-input" ${isSelected ? "checked" : ""}/>
-         <span class="check-box"></span>
-       </label>`
-    : "";
+
+  // Checkbox on EVERY item — sidebar-only items get one too
+  const checkbox = `
+    <label class="conv-check" title="Select to combine with others">
+      <input type="checkbox" class="check-input" ${isSelected ? "checked" : ""}/>
+      <span class="check-box"></span>
+    </label>`;
 
   el.innerHTML = `
     ${checkbox}
@@ -441,37 +447,37 @@ function makeItem(item, num) {
         ${platformBadge}${snippetBadge}
         ${mem
           ? `<span>${mem.timestamp}</span>${msgCount}`
-          : `<span class="sidebar-label">from sidebar</span>`}
+          : `<span class="sidebar-label">↗ open to use</span>`}
       </div>
     </div>
     ${actionIcon}
   `;
 
-  if (injectable) {
-    // Checkbox toggles selection; doesn't inject
-    el.querySelector(".conv-check").addEventListener("click", (e) => {
-      e.stopPropagation();
-      toggleSelect(mem, el);
-    });
+  // Checkbox always toggles selection
+  el.querySelector(".conv-check").addEventListener("click", (e) => {
+    e.stopPropagation();
+    toggleSelect(item, el);
+  });
 
+  if (injectable) {
     el.querySelector(".pin-btn")?.addEventListener("click", (e) => {
       e.stopPropagation();
       togglePin(mem);
     });
-
-    // Row click: if nothing selected yet → inject immediately.
-    //            If items are already selected → add this one to selection.
-    el.addEventListener("click", (e) => {
-      if (e.target.closest(".conv-check, .pin-btn")) return;
-      if (selectedIds.size > 0) {
-        toggleSelect(mem, el);
-      } else {
-        injectMemory(mem, el);
-      }
-    });
-  } else {
-    el.addEventListener("click", () => navigateTo(url, tabId));
   }
+
+  // Row click behaviour
+  el.addEventListener("click", (e) => {
+    if (e.target.closest(".conv-check, .pin-btn")) return;
+    if (selectedItems.size > 0) {
+      // In selection mode — add/remove from selection
+      toggleSelect(item, el);
+    } else if (injectable) {
+      injectMemory(mem, el);
+    } else {
+      navigateTo(url, tabId);
+    }
+  });
 
   return el;
 }
@@ -592,20 +598,24 @@ syncBtn.addEventListener("click", syncAll);
 clearSelection.addEventListener("click", clearAll);
 
 useSelected.addEventListener("click", () => {
-  if (!selectedIds.size) return;
+  if (!selectedItems.size) return;
 
-  // Collect the full memory objects for all selected IDs
-  const allStored = LLMS.flatMap((llm) => platformData[llm.name]?.stored || []);
-  const selected  = [...selectedIds]
-    .map((id) => allStored.find((m) => m.id === id))
-    .filter(Boolean);
+  const items     = [...selectedItems.values()];
+  const injectable = items.filter((i) => !!i.mem);
+  const navOnly    = items.filter((i) => !i.mem);
 
-  if (!selected.length) { showToast("No injectable items selected"); return; }
+  if (!injectable.length && navOnly.length) {
+    // All selected are sidebar-only — navigate to first one
+    showToast("These conversations need to be opened first. Navigating…");
+    setTimeout(() => navigateTo(navOnly[0].url, navOnly[0].tabId), 800);
+    return;
+  }
 
-  // Build merged or single briefing
-  const text = selected.length === 1
-    ? (injectMode === "summary" ? buildSummary(selected[0]) : buildBriefing(selected[0]))
-    : buildMergedBriefing(selected);
+  const memories = injectable.map((i) => i.mem);
+
+  const text = memories.length === 1
+    ? (injectMode === "summary" ? buildSummary(memories[0]) : buildBriefing(memories[0]))
+    : buildMergedBriefing(memories);
 
   chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
     if (!tab) { copyFallback(text); return; }
@@ -614,11 +624,12 @@ useSelected.addEventListener("click", () => {
         copyFallback(text);
       } else {
         chrome.runtime.sendMessage({ type: "BUMP_ANALYTIC", key: "injects" });
-        selectedIds.clear();
+        selectedItems.clear();
+        const skipped = navOnly.length ? ` (${navOnly.length} sidebar-only skipped)` : "";
         showToast(
-          selected.length === 1
-            ? "Context injected ✓"
-            : `${selected.length} conversations merged & injected ✓`
+          memories.length === 1
+            ? `Context injected ✓${skipped}`
+            : `${memories.length} conversations merged & injected ✓${skipped}`
         );
         setTimeout(() => window.close(), 900);
       }
