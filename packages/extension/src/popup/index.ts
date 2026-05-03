@@ -29,6 +29,7 @@ let briefingMode:    BriefingMode = "full";
 let selectedItems:   Map<string, Conversation> = new Map();
 let isGeneratingPkg  = false;
 let isSyncing        = false;
+let sidebarCache:    Record<string, Array<{ title: string; url: string }>> = {};
 
 // ── DOM refs ───────────────────────────────────────────────────────────────────
 
@@ -54,6 +55,10 @@ const clearSelection = $("clearSelection");
 const useSelected    = $("useSelected");
 const itemList       = $("itemList");
 const toast          = $("toast");
+const confirmModal   = $("confirmModal");
+const confirmList    = $("confirmList");
+const confirmCancel  = $("confirmCancel");
+const confirmInject  = $("confirmInject");
 
 // Settings panel
 const autoSaveToggle = $<HTMLInputElement>("autoSaveToggle");
@@ -93,17 +98,19 @@ function send<T = unknown>(message: unknown): Promise<T> {
 // ── Data loading ───────────────────────────────────────────────────────────────
 
 async function loadAll(): Promise<void> {
-  const [convRes, pkgRes, settRes, authRes] = await Promise.all([
+  const [convRes, pkgRes, settRes, authRes, cacheRes] = await Promise.all([
     send<{ success: boolean; data: Conversation[] }>({ type: "GET_CONVERSATIONS" }),
     send<{ success: boolean; data: ContextPackage[] }>({ type: "GET_PACKAGES" }),
     send<{ success: boolean; data: ExtensionSettings }>({ type: "GET_SETTINGS" }),
     send<{ success: boolean; data: AuthSession | null }>({ type: "GET_AUTH" }),
+    send<{ success: boolean; data: Record<string, Array<{ title: string; url: string }>> }>({ type: "GET_SIDEBAR_CACHE" }),
   ]);
 
   if (convRes.success) conversations = convRes.data ?? [];
   if (pkgRes.success)  packages      = pkgRes.data ?? [];
   if (settRes.success) settings      = settRes.data ?? DEFAULT_SETTINGS;
   if (authRes.success) session       = authRes.data;
+  if (cacheRes.success) sidebarCache = cacheRes.data ?? {};
 
   briefingMode = settings.defaultBriefingMode ?? "full";
   render();
@@ -151,11 +158,16 @@ function renderTabs(): void {
     const btn = document.createElement("button");
     btn.className = `tab${activeTab === label ? " active" : ""}`;
 
-    const count = label === "All"
+    const savedCount = label === "All"
       ? conversations.length
       : conversations.filter((c) => c.platform === label).length;
 
-    btn.innerHTML = `${label}${count ? ` <span class="tab-count">${count}</span>` : ""}`;
+    const discoveredCount = label === "All"
+      ? Object.values(sidebarCache).reduce((n, arr) => n + arr.length, 0)
+      : (sidebarCache[label]?.length ?? 0);
+
+    const total = savedCount + discoveredCount;
+    btn.innerHTML = `${label}${total ? ` <span class="tab-count">${total}</span>` : ""}`;
     btn.addEventListener("click", () => {
       activeTab = label;
       render();
@@ -168,7 +180,12 @@ function renderConversations(): void {
   itemList.innerHTML = "";
   const items = getFilteredConversations();
 
-  if (!items.length) {
+  // Discovered items from sidebar cache, filtered by active tab
+  const discoveredItems = getDiscoveredItems();
+  const savedUrls = new Set(conversations.map((c) => c.sourceUrl).filter(Boolean));
+  const newDiscovered = discoveredItems.filter((d) => !savedUrls.has(d.url));
+
+  if (!items.length && !newDiscovered.length) {
     renderEmpty();
     return;
   }
@@ -194,6 +211,28 @@ function renderConversations(): void {
     appendDivider("Older");
     older.forEach((c) => { itemList.appendChild(makeConvItem(c, counter++)); });
   }
+
+  if (newDiscovered.length) {
+    appendDivider("Discovered on your LLMs");
+    newDiscovered.forEach((d) => { itemList.appendChild(makeSidebarItem(d)); });
+  }
+}
+
+function getDiscoveredItems(): Array<{ title: string; url: string; platform: string }> {
+  const result: Array<{ title: string; url: string; platform: string }> = [];
+  const platformFilter = activeTab === "All" ? null : activeTab;
+  for (const [platform, items] of Object.entries(sidebarCache)) {
+    if (platformFilter && platform !== platformFilter) continue;
+    if (!searchQuery) {
+      items.forEach((item) => result.push({ ...item, platform }));
+    } else {
+      const q = searchQuery.toLowerCase();
+      items
+        .filter((item) => item.title.toLowerCase().includes(q))
+        .forEach((item) => result.push({ ...item, platform }));
+    }
+  }
+  return result;
 }
 
 function renderPackages(): void {
@@ -318,6 +357,36 @@ function makeConvItem(conv: Conversation, num: number): HTMLElement {
   return el;
 }
 
+// ── Sidebar-discovered item (not yet saved) ────────────────────────────────────
+
+function makeSidebarItem(item: { title: string; url: string; platform: string }): HTMLElement {
+  const el = document.createElement("div");
+  el.className = "item sidebar-item";
+
+  el.innerHTML = `
+    <div class="item-body">
+      <div class="item-title" title="${escHtml(item.title)}">${escHtml(item.title)}</div>
+      <div class="item-meta">
+        <span class="platform-badge">${escHtml(item.platform)}</span>
+        <span class="discovered-badge">not saved</span>
+      </div>
+    </div>
+    <button class="open-btn" title="Open conversation">Open →</button>
+  `;
+
+  el.querySelector(".open-btn")!.addEventListener("click", (e) => {
+    e.stopPropagation();
+    chrome.tabs.create({ url: item.url });
+  });
+
+  el.addEventListener("click", (e) => {
+    if ((e.target as HTMLElement).closest(".open-btn")) return;
+    chrome.tabs.create({ url: item.url });
+  });
+
+  return el;
+}
+
 // ── Package item ───────────────────────────────────────────────────────────────
 
 function makePkgItem(pkg: ContextPackage): HTMLElement {
@@ -404,13 +473,59 @@ function togglePin(conv: Conversation): void {
   showToast(conv.pinned ? "Pinned ★" : "Unpinned");
 }
 
+// ── Confirmation modal ─────────────────────────────────────────────────────────
+
+let pendingInjectConvs: Conversation[] = [];
+let pendingInjectMode: BriefingMode = "full";
+
+function showConfirmModal(convs: Conversation[], onConfirm: (mode: BriefingMode) => void): void {
+  pendingInjectConvs = convs;
+  pendingInjectMode  = briefingMode;
+
+  // Populate list
+  confirmList.innerHTML = "";
+  convs.forEach((c) => {
+    const item = document.createElement("div");
+    item.className = "confirm-item";
+    item.innerHTML = `
+      <span class="confirm-item-platform">${escHtml(c.platform)}</span>
+      <span class="confirm-item-title">${escHtml(c.title)}</span>
+    `;
+    confirmList.appendChild(item);
+  });
+
+  // Mode buttons
+  confirmModal.querySelectorAll<HTMLButtonElement>(".confirm-mode-btn").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.mode === pendingInjectMode);
+    btn.onclick = () => {
+      pendingInjectMode = btn.dataset.mode as BriefingMode;
+      confirmModal.querySelectorAll(".confirm-mode-btn").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+    };
+  });
+
+  confirmModal.classList.remove("hidden");
+
+  const cleanup = () => { confirmModal.classList.add("hidden"); };
+
+  confirmCancel.onclick = cleanup;
+  confirmModal.onclick = (e) => { if (e.target === confirmModal) cleanup(); };
+
+  confirmInject.onclick = () => {
+    cleanup();
+    onConfirm(pendingInjectMode);
+  };
+}
+
 function injectConversation(conv: Conversation, el: HTMLElement): void {
-  const text = buildBriefing(conv, briefingMode);
-  injectTextToActiveTab(text, () => {
-    el.classList.add("flashing");
-    setTimeout(() => el.classList.remove("flashing"), 450);
-    showToast("Context injected ✓");
-    setTimeout(() => window.close(), 900);
+  showConfirmModal([conv], (mode) => {
+    const text = buildBriefing(conv, mode);
+    injectTextToActiveTab(text, () => {
+      el.classList.add("flashing");
+      setTimeout(() => el.classList.remove("flashing"), 450);
+      showToast("Context injected ✓");
+      setTimeout(() => window.close(), 900);
+    });
   });
 }
 
@@ -584,19 +699,20 @@ useSelected.addEventListener("click", () => {
   const convs = [...selectedItems.values()];
   if (!convs.length) return;
 
-  const text = convs.length === 1
-    ? buildBriefing(convs[0]!, briefingMode)
-    : buildMergedBriefing(convs, briefingMode === "full" ? "summary" : briefingMode);
+  showConfirmModal(convs, (mode) => {
+    const text = convs.length === 1
+      ? buildBriefing(convs[0]!, mode)
+      : buildMergedBriefing(convs, mode === "full" ? "summary" : mode);
 
-  injectTextToActiveTab(text, () => {
-    const skipped = 0;
-    showToast(
-      convs.length === 1
-        ? "Context injected ✓"
-        : `${convs.length} conversations merged & injected ✓`
-    );
-    clearAllSelections();
-    setTimeout(() => window.close(), 900);
+    injectTextToActiveTab(text, () => {
+      showToast(
+        convs.length === 1
+          ? "Context injected ✓"
+          : `${convs.length} conversations merged & injected ✓`
+      );
+      clearAllSelections();
+      setTimeout(() => window.close(), 900);
+    });
   });
 });
 

@@ -130,6 +130,32 @@
 
     <!-- Toast -->
     <div id="toast" class="toast hidden"></div>
+
+    <!-- Inject confirmation modal -->
+    <div id="confirmModal" class="confirm-modal hidden">
+      <div class="confirm-card">
+        <div class="confirm-header">
+          <div class="confirm-icon">⬡</div>
+          <div>
+            <div class="confirm-title">Use this context?</div>
+            <div class="confirm-sub">This will be placed into your current chat input.</div>
+          </div>
+        </div>
+        <div id="confirmList" class="confirm-list"></div>
+        <div class="confirm-mode-row">
+          <span class="confirm-mode-label">Detail level:</span>
+          <div class="confirm-mode-btns">
+            <button class="confirm-mode-btn active" data-mode="full">Full</button>
+            <button class="confirm-mode-btn" data-mode="summary">Summary</button>
+            <button class="confirm-mode-btn" data-mode="keypoints">Key points</button>
+          </div>
+        </div>
+        <div class="confirm-actions">
+          <button id="confirmCancel" class="confirm-btn-cancel">Cancel</button>
+          <button id="confirmInject" class="confirm-btn-inject">Inject context →</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script src="popup.js"></script>

@@ -163,6 +163,10 @@ export type ExtensionMessage = {
 } | {
     type: "SYNC_NOW";
 } | {
+    type: "GET_SIDEBAR_CACHE";
+} | {
+    type: "OPEN_POPUP";
+} | {
     type: "GET_SELECTOR_REGISTRY";
 } | {
     type: "BUMP_ANALYTIC";

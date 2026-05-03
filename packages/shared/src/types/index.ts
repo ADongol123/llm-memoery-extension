@@ -188,6 +188,8 @@ export type ExtensionMessage =
   | { type: "SIGN_OUT" }
   | { type: "AUTH_CALLBACK"; accessToken: string; refreshToken: string }
   | { type: "SYNC_NOW" }
+  | { type: "GET_SIDEBAR_CACHE" }
+  | { type: "OPEN_POPUP" }
   | { type: "GET_SELECTOR_REGISTRY" }
   | { type: "BUMP_ANALYTIC"; key: "saves" | "injects" | "packages_generated" };
 
@@ -200,7 +202,7 @@ export interface ExtensionSettings {
 }
 
 export const DEFAULT_SETTINGS: ExtensionSettings = {
-  pickerEnabled: false,
+  pickerEnabled: true,
   autoSaveEnabled: true,
   isPro: false,
   defaultBriefingMode: "full",

@@ -162,11 +162,37 @@ async function dispatch(message: ExtensionMessage, respond: SendResponse): Promi
         break;
       }
 
+      // ── UI helpers ────────────────────────────────────────────────────────────
+
+      case "OPEN_POPUP": {
+        // Chrome doesn't support programmatic popup open; open as a small window instead
+        chrome.windows.create({
+          url:    chrome.runtime.getURL("popup.html"),
+          type:   "popup",
+          width:  400,
+          height: 580,
+        });
+        respond({ success: true });
+        break;
+      }
+
       // ── Sync ─────────────────────────────────────────────────────────────────
 
       case "SYNC_NOW": {
-        await syncNow();
-        respond({ success: true });
+        const results = await syncSidebars();
+        // Also try Supabase sync (silently skips if not authed)
+        syncNow().catch(() => {});
+        respond({ success: true, results });
+        break;
+      }
+
+      case "GET_SIDEBAR_CACHE": {
+        const cache = await new Promise<Record<string, unknown>>((resolve) =>
+          chrome.storage.local.get("llm_sidebar_cache", (res) =>
+            resolve((res.llm_sidebar_cache ?? {}) as Record<string, unknown>)
+          )
+        );
+        respond({ success: true, data: cache });
         break;
       }
 
@@ -335,6 +361,120 @@ async function bumpAnalytic(key: string): Promise<void> {
       a[key] = (a[key] ?? 0) + 1;
       chrome.storage.local.set({ llm_analytics: a }, resolve);
     });
+  });
+}
+
+// ── Sidebar sync ───────────────────────────────────────────────────────────────
+// For each LLM platform:
+//   1. If a tab is already open → scrape it directly (fast)
+//   2. Otherwise → open a background tab, wait for render, scrape, close
+// Results cached in chrome.storage.local as llm_sidebar_cache.
+
+const SEED_URLS: Record<string, string> = {
+  Claude:   "https://claude.ai/new",
+  ChatGPT:  "https://chatgpt.com",
+  Grok:     "https://grok.com",
+  Gemini:   "https://gemini.google.com/app",
+  DeepSeek: "https://chat.deepseek.com",
+};
+
+const DOMAIN_MAP: Record<string, string> = {
+  "claude.ai":          "Claude",
+  "chatgpt.com":        "ChatGPT",
+  "chat.openai.com":    "ChatGPT",
+  "gemini.google.com":  "Gemini",
+  "grok.com":           "Grok",
+  "chat.deepseek.com":  "DeepSeek",
+};
+
+async function syncSidebars(): Promise<Record<string, number>> {
+  const platforms = Object.keys(SEED_URLS);
+  const results: Record<string, number> = {};
+
+  // Find already-open LLM tabs
+  const allTabs = await chrome.tabs.query({});
+  const openTabMap: Record<string, chrome.tabs.Tab> = {};
+  for (const tab of allTabs) {
+    if (!tab.url) continue;
+    try {
+      const host = new URL(tab.url).hostname;
+      for (const [domain, name] of Object.entries(DOMAIN_MAP)) {
+        if (host.includes(domain) && !openTabMap[name]) {
+          openTabMap[name] = tab;
+        }
+      }
+    } catch { /* skip invalid URLs */ }
+  }
+
+  const cache: Record<string, unknown[]> = {};
+
+  for (const platform of platforms) {
+    let conversations: Array<{ title: string; url: string }> = [];
+
+    const existingTab = openTabMap[platform];
+
+    if (existingTab?.id) {
+      // Fast path — scrape already-open tab
+      conversations = await scrapeTab(existingTab.id);
+    } else {
+      // Slow path — open background tab, wait, scrape, close
+      const seedUrl = SEED_URLS[platform];
+      if (!seedUrl) continue;
+
+      let tab: chrome.tabs.Tab | null = null;
+      try {
+        tab = await chrome.tabs.create({ url: seedUrl, active: false });
+
+        await new Promise<void>((res) => {
+          const onUpdated = (id: number, info: chrome.tabs.TabChangeInfo) => {
+            if (id === tab!.id && info.status === "complete") {
+              chrome.tabs.onUpdated.removeListener(onUpdated);
+              res();
+            }
+          };
+          chrome.tabs.onUpdated.addListener(onUpdated);
+          setTimeout(res, 12000); // 12s max
+        });
+
+        // Extra wait for SPA sidebar to render
+        await new Promise((r) => setTimeout(r, 2500));
+
+        if (tab.id) conversations = await scrapeTab(tab.id);
+      } catch { /* skip this platform */ } finally {
+        if (tab?.id) chrome.tabs.remove(tab.id).catch(() => {});
+      }
+    }
+
+    cache[platform] = conversations;
+    results[platform] = conversations.length;
+
+    // Persist after each platform so partial results are visible immediately
+    const existing = await new Promise<Record<string, unknown[]>>((r) =>
+      chrome.storage.local.get("llm_sidebar_cache", (res) =>
+        r((res.llm_sidebar_cache ?? {}) as Record<string, unknown[]>)
+      )
+    );
+    await chrome.storage.local.set({
+      llm_sidebar_cache: { ...existing, [platform]: conversations },
+    });
+  }
+
+  return results;
+}
+
+function scrapeTab(tabId: number): Promise<Array<{ title: string; url: string }>> {
+  return new Promise((resolve) => {
+    chrome.tabs.sendMessage(
+      tabId,
+      { type: "GET_SIDEBAR_CONVERSATIONS" },
+      (res: { success?: boolean; conversations?: Array<{ title: string; url: string }> } | undefined) => {
+        if (chrome.runtime.lastError || !res?.success) {
+          resolve([]);
+        } else {
+          resolve(res.conversations ?? []);
+        }
+      }
+    );
   });
 }
 

@@ -1,5 +1,6 @@
-import { createServerSupabaseClient } from "../../lib/supabase-server";
+export const dynamic = "force-dynamic";
 
+import { createServerSupabaseClient } from "../../lib/supabase-server";
 import { redirect } from "next/navigation";
 
 export default async function ConversationsPage() {

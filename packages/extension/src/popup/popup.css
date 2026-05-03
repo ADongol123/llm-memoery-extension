@@ -627,3 +627,180 @@ body {
 @keyframes pulse {
   0%,100% { opacity: 1; } 50% { opacity: 0.4; }
 }
+
+/* ── Sidebar-discovered items ── */
+.sidebar-item { opacity: 0.75; }
+.sidebar-item:hover { opacity: 1; }
+.discovered-badge {
+  font-size: 9px;
+  font-weight: 700;
+  color: #f59e0b;
+  background: rgba(245,158,11,0.1);
+  border: 1px solid rgba(245,158,11,0.3);
+  border-radius: 4px;
+  padding: 0 5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.open-btn {
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  color: var(--text2);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  flex-shrink: 0;
+  transition: color 0.12s, background 0.12s, border-color 0.12s;
+}
+.open-btn:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+/* ── Inject confirmation modal ── */
+.confirm-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: stretch;
+  animation: fadeIn 0.15s ease;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.confirm-card {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 16px 16px 0 0;
+  padding: 20px 18px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  animation: slideUp 0.2s cubic-bezier(0.34,1.3,0.64,1);
+}
+@keyframes slideUp { from { transform: translateY(20px); opacity:0; } to { transform: translateY(0); opacity:1; } }
+.confirm-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.confirm-icon {
+  font-size: 22px;
+  color: var(--accent);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.confirm-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+.confirm-sub {
+  font-size: 11px;
+  color: var(--text3);
+  margin-top: 2px;
+}
+.confirm-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  max-height: 130px;
+  overflow-y: auto;
+}
+.confirm-item {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.confirm-item-platform {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text2);
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+  padding: 1px 5px;
+  flex-shrink: 0;
+}
+.confirm-item-title {
+  font-size: 12px;
+  color: var(--text2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.confirm-mode-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.confirm-mode-label {
+  font-size: 11px;
+  color: var(--text3);
+  flex-shrink: 0;
+}
+.confirm-mode-btns {
+  display: flex;
+  gap: 4px;
+}
+.confirm-mode-btn {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--text3);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 8px;
+  transition: all 0.1s;
+}
+.confirm-mode-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.confirm-actions {
+  display: flex;
+  gap: 8px;
+}
+.confirm-btn-cancel {
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  color: var(--text2);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 9px 16px;
+  flex: 0 0 auto;
+  transition: all 0.12s;
+}
+.confirm-btn-cancel:hover { border-color: var(--text3); color: var(--text); }
+.confirm-btn-inject {
+  background: var(--accent);
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 9px 16px;
+  flex: 1;
+  transition: opacity 0.12s, transform 0.1s;
+}
+.confirm-btn-inject:hover { opacity: 0.88; transform: scale(1.01); }
+.confirm-btn-inject:active { transform: scale(0.98); }

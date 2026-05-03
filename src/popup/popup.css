@@ -650,4 +650,41 @@ body {
   animation: toastLife 2.5s var(--ease) forwards;
 }
 
+/* ── Sidebar-discovered items ── */
+.sidebar-item {
+  opacity: 0.75;
+}
+.sidebar-item:hover {
+  opacity: 1;
+}
+.discovered-badge {
+  font-size: 9px;
+  font-weight: 700;
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: 4px;
+  padding: 0 5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.open-btn {
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  color: var(--text2);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  flex-shrink: 0;
+  transition: all 0.12s var(--ease);
+}
+.open-btn:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--white);
+}
+
 .hidden { display: none !important; }
