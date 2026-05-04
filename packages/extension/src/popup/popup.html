@@ -56,7 +56,10 @@
 
       <!-- Selection bar (shown when items are checked) -->
       <div id="selectionBar" class="selection-bar hidden">
-        <span id="selectionCount">0 selected</span>
+        <div class="sel-count-wrap">
+          <span class="sel-dot"></span>
+          <span id="selectionCount">0 selected</span>
+        </div>
         <div class="sel-actions">
           <button id="clearSelection" class="sel-btn">Clear</button>
           <button id="useSelected"    class="sel-btn primary">Use selected →</button>
