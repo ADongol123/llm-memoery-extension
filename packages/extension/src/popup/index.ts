@@ -328,11 +328,10 @@ function makeConvItem(conv: Conversation, num: number): HTMLElement {
   });
 
   el.innerHTML = `
-    <label class="item-check" title="Select">
+    <label class="item-check" title="Click to select">
       <input type="checkbox" class="check-input" ${isSelected ? "checked" : ""}/>
-      <span class="check-box"></span>
+      <span class="check-box" data-num="${num}"></span>
     </label>
-    <span class="item-num">${num}</span>
     <button class="pin-btn" title="${conv.pinned ? "Unpin" : "Pin"}">${conv.pinned ? "★" : "☆"}</button>
     <div class="item-body">
       <div class="item-title" title="${escHtml(conv.title)}">${escHtml(conv.title)}</div>
