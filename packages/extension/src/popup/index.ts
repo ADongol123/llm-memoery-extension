@@ -696,9 +696,18 @@ async function syncAll(): Promise<void> {
   syncBtn.classList.add("syncing");
 
   try {
-    await send({ type: "SYNC_NOW" });
+    const res = await send<{ success: boolean; results?: Record<string, number>; error?: string }>(
+      { type: "SYNC_NOW" }
+    );
     await loadAll();
-    showToast("Sync complete ✓");
+    if (!res.success) {
+      showToast(`Sync error: ${res.error ?? "unknown"}`);
+    } else {
+      const found = Object.values(res.results ?? {}).reduce((n, v) => n + v, 0);
+      showToast(found > 0 ? `Sync complete — ${found} conversations discovered ✓` : "Sync complete ✓");
+    }
+  } catch (e) {
+    showToast(`Sync failed: ${String(e)}`);
   } finally {
     isSyncing = false;
     syncBtn.textContent = "⟳ Sync";
