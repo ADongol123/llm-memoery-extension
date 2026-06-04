@@ -373,18 +373,9 @@ async function bumpAnalytic(key: string): Promise<void> {
 }
 
 // ── Sidebar sync ───────────────────────────────────────────────────────────────
-// For each LLM platform:
-//   1. If a tab is already open → scrape it directly (fast)
-//   2. Otherwise → open a background tab, wait for render, scrape, close
+// Scrapes already-open LLM tabs to discover sidebar conversations.
+// Never opens new tabs — that would close the popup and cause unwanted redirects.
 // Results cached in chrome.storage.local as llm_sidebar_cache.
-
-const SEED_URLS: Record<string, string> = {
-  Claude:   "https://claude.ai/new",
-  ChatGPT:  "https://chatgpt.com",
-  Grok:     "https://grok.com",
-  Gemini:   "https://gemini.google.com/app",
-  DeepSeek: "https://chat.deepseek.com",
-};
 
 const DOMAIN_MAP: Record<string, string> = {
   "claude.ai":          "Claude",
@@ -395,8 +386,10 @@ const DOMAIN_MAP: Record<string, string> = {
   "chat.deepseek.com":  "DeepSeek",
 };
 
+const KNOWN_PLATFORMS = ["Claude", "ChatGPT", "Gemini", "Grok", "DeepSeek"];
+
 async function syncSidebars(): Promise<Record<string, number>> {
-  const platforms = Object.keys(SEED_URLS);
+  const platforms = KNOWN_PLATFORMS;
   const results: Record<string, number> = {};
 
   // Find already-open LLM tabs
@@ -422,35 +415,9 @@ async function syncSidebars(): Promise<Record<string, number>> {
     const existingTab = openTabMap[platform];
 
     if (existingTab?.id) {
-      // Fast path — scrape already-open tab
+      // Only scrape already-open tabs — never open background tabs during sync
+      // (background tab creation closes the popup and causes unwanted redirects)
       conversations = await scrapeTab(existingTab.id);
-    } else {
-      // Slow path — open background tab, wait, scrape, close
-      const seedUrl = SEED_URLS[platform];
-      if (!seedUrl) continue;
-
-      let tab: chrome.tabs.Tab | null = null;
-      try {
-        tab = await chrome.tabs.create({ url: seedUrl, active: false });
-
-        await new Promise<void>((res) => {
-          const onUpdated = (id: number, info: chrome.tabs.TabChangeInfo) => {
-            if (id === tab!.id && info.status === "complete") {
-              chrome.tabs.onUpdated.removeListener(onUpdated);
-              res();
-            }
-          };
-          chrome.tabs.onUpdated.addListener(onUpdated);
-          setTimeout(res, 12000); // 12s max
-        });
-
-        // Extra wait for SPA sidebar to render
-        await new Promise((r) => setTimeout(r, 2500));
-
-        if (tab.id) conversations = await scrapeTab(tab.id);
-      } catch { /* skip this platform */ } finally {
-        if (tab?.id) chrome.tabs.remove(tab.id).catch(() => {});
-      }
     }
 
     cache[platform] = conversations;
