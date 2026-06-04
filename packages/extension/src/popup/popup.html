@@ -12,7 +12,15 @@
     <!-- Header -->
     <header class="header">
       <div class="header-left">
-        <span class="logo">⬡</span>
+        <svg class="logo-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="22" height="22" aria-hidden="true">
+          <path d="M64 6L118 35.5V93.5L64 123L10 93.5V35.5L64 6Z" fill="#6366f1"/>
+          <circle cx="64" cy="42" r="9" fill="white"/>
+          <circle cx="38" cy="86" r="9" fill="white"/>
+          <circle cx="90" cy="86" r="9" fill="white"/>
+          <line x1="64" y1="42" x2="38" y2="86" stroke="rgba(255,255,255,0.6)" stroke-width="7" stroke-linecap="round"/>
+          <line x1="64" y1="42" x2="90" y2="86" stroke="rgba(255,255,255,0.6)" stroke-width="7" stroke-linecap="round"/>
+          <line x1="38" y1="86" x2="90" y2="86" stroke="rgba(255,255,255,0.6)" stroke-width="7" stroke-linecap="round"/>
+        </svg>
         <span class="logo-text">LLM Memory</span>
       </div>
       <div class="header-right">
@@ -61,8 +69,9 @@
           <span id="selectionCount">0 selected</span>
         </div>
         <div class="sel-actions">
-          <button id="clearSelection" class="sel-btn">Clear</button>
-          <button id="useSelected"    class="sel-btn primary">Use selected →</button>
+          <button id="clearSelection"  class="sel-btn">Clear</button>
+          <button id="transferBtn"     class="sel-btn">Transfer →</button>
+          <button id="useSelected"     class="sel-btn primary">Use selected →</button>
         </div>
       </div>
 
@@ -149,14 +158,43 @@
         <div class="confirm-mode-row">
           <span class="confirm-mode-label">Detail level:</span>
           <div class="confirm-mode-btns">
-            <button class="confirm-mode-btn active" data-mode="full">Full</button>
-            <button class="confirm-mode-btn" data-mode="summary">Summary</button>
+            <button class="confirm-mode-btn active" data-mode="summary">Summary</button>
             <button class="confirm-mode-btn" data-mode="keypoints">Key points</button>
+            <button class="confirm-mode-btn" data-mode="full">Raw (large)</button>
           </div>
+        </div>
+        <div id="confirmIntentRow" class="confirm-intent-row hidden">
+          <label class="confirm-intent-label">What are you working on next? <span class="confirm-intent-opt">(optional · smart retrieval)</span></label>
+          <input type="text" id="confirmIntentInput" class="confirm-intent-input" placeholder="e.g. implement the auth system we discussed" />
         </div>
         <div class="confirm-actions">
           <button id="confirmCancel" class="confirm-btn-cancel">Cancel</button>
           <button id="confirmInject" class="confirm-btn-inject">Inject context →</button>
+        </div>
+      </div>
+    </div>
+    <!-- Transfer modal -->
+    <div id="transferModal" class="confirm-modal hidden">
+      <div class="confirm-card transfer-card">
+        <div class="confirm-header">
+          <div class="confirm-icon">⇄</div>
+          <div>
+            <div class="confirm-title">Smart context inject</div>
+            <div class="confirm-sub">Retrieves only what's relevant and injects it here.</div>
+          </div>
+        </div>
+        <div class="transfer-field">
+          <label class="transfer-label" for="transferIntent">What do you want to do next?</label>
+          <input
+            type="text"
+            id="transferIntent"
+            class="transfer-input"
+            placeholder="e.g. build the auth system we discussed"
+          />
+        </div>
+        <div class="confirm-actions">
+          <button id="transferCancel" class="confirm-btn-cancel">Cancel</button>
+          <button id="transferConfirm" class="confirm-btn-inject">Inject context →</button>
         </div>
       </div>
     </div>

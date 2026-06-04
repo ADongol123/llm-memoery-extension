@@ -165,6 +165,35 @@ export interface AuthSession {
   expiresAt: number;
 }
 
+// ── Chunk ───────────────────────────────────────────────────────────────────────
+
+export type Chunk = {
+  id: string;
+  conversationId: string;
+  contentType: 'text' | 'code' | 'table';
+  rawContent: string;
+  processedContent: string;
+  chunkIndex: number;
+  metadata: { language?: string; tableHeaders?: string[] };
+};
+
+// ── Knowledge Brief ──────────────────────────────────────────────────────────────
+
+export type KnowledgeBrief = {
+  synthesizedContext: string;
+  keyArtifacts: { type: string; content: string; label: string }[];
+  openQuestions: string[];
+  topicTags: string[];
+  sourceCount: number;
+};
+
+// ── Transfer Session ─────────────────────────────────────────────────────────────
+
+export type TransferSession = {
+  selectedConversationIds: string[];
+  intent: string;
+};
+
 // ── Extension messages (background ↔ content ↔ popup) ─────────────────────────
 
 export type ExtensionMessage =
@@ -191,7 +220,9 @@ export type ExtensionMessage =
   | { type: "GET_SIDEBAR_CACHE" }
   | { type: "OPEN_POPUP" }
   | { type: "GET_SELECTOR_REGISTRY" }
-  | { type: "BUMP_ANALYTIC"; key: "saves" | "injects" | "packages_generated" };
+  | { type: "BUMP_ANALYTIC"; key: "saves" | "injects" | "packages_generated" }
+  | { type: "TRANSFER_CONTEXT"; payload: TransferSession }
+  | { type: "TRANSFER_CONTEXT_RESULT"; payload: KnowledgeBrief | null };
 
 export interface ExtensionSettings {
   pickerEnabled: boolean;
@@ -205,6 +236,6 @@ export const DEFAULT_SETTINGS: ExtensionSettings = {
   pickerEnabled: true,
   autoSaveEnabled: true,
   isPro: false,
-  defaultBriefingMode: "full",
+  defaultBriefingMode: "summary",
   autoSaveMinMessages: 4,
 };

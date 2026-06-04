@@ -174,6 +174,20 @@ Deno.serve(async (req) => {
         });
     }
 
+    // ── Step 5: Ingest chunks (fire-and-forget, non-blocking) ─────────────────
+    // We call ingest-chunks via HTTP so it runs in its own isolate and doesn't
+    // block the response back to the webhook.
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    fetch(`${supabaseUrl}/functions/v1/ingest-chunks`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${serviceRoleKey}`,
+      },
+      body: JSON.stringify({ conversation_id: conversationId }),
+    }).catch((e) => console.error("ingest-chunks call failed:", e));
+
     return new Response(
       JSON.stringify({ success: true, conversationId }),
       { headers: { "Content-Type": "application/json" } }

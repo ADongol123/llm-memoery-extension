@@ -108,6 +108,33 @@ export interface AuthSession {
     email: string;
     expiresAt: number;
 }
+export type Chunk = {
+    id: string;
+    conversationId: string;
+    contentType: 'text' | 'code' | 'table';
+    rawContent: string;
+    processedContent: string;
+    chunkIndex: number;
+    metadata: {
+        language?: string;
+        tableHeaders?: string[];
+    };
+};
+export type KnowledgeBrief = {
+    synthesizedContext: string;
+    keyArtifacts: {
+        type: string;
+        content: string;
+        label: string;
+    }[];
+    openQuestions: string[];
+    topicTags: string[];
+    sourceCount: number;
+};
+export type TransferSession = {
+    selectedConversationIds: string[];
+    intent: string;
+};
 export type ExtensionMessage = {
     type: "GET_SIDEBAR_CONVERSATIONS";
 } | {
@@ -171,6 +198,12 @@ export type ExtensionMessage = {
 } | {
     type: "BUMP_ANALYTIC";
     key: "saves" | "injects" | "packages_generated";
+} | {
+    type: "TRANSFER_CONTEXT";
+    payload: TransferSession;
+} | {
+    type: "TRANSFER_CONTEXT_RESULT";
+    payload: KnowledgeBrief | null;
 };
 export interface ExtensionSettings {
     pickerEnabled: boolean;

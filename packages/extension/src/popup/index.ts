@@ -53,12 +53,19 @@ const selectionBar   = $("selectionBar");
 const selectionCount = $("selectionCount");
 const clearSelection = $("clearSelection");
 const useSelected    = $("useSelected");
+const transferBtn    = $("transferBtn");
 const itemList       = $("itemList");
 const toast          = $("toast");
-const confirmModal   = $("confirmModal");
-const confirmList    = $("confirmList");
-const confirmCancel  = $("confirmCancel");
-const confirmInject  = $("confirmInject");
+const confirmModal       = $("confirmModal");
+const confirmList        = $("confirmList");
+const confirmCancel      = $("confirmCancel");
+const confirmInject      = $("confirmInject");
+const confirmIntentRow   = $("confirmIntentRow");
+const confirmIntentInput = $<HTMLInputElement>("confirmIntentInput");
+const transferModal  = $("transferModal");
+const transferIntent = $<HTMLInputElement>("transferIntent");
+const transferCancel = $("transferCancel");
+const transferConfirm = $("transferConfirm");
 const selectHint     = $("selectHint");
 
 // Settings panel
@@ -489,14 +496,21 @@ function togglePin(conv: Conversation): void {
 
 // ── Confirmation modal ─────────────────────────────────────────────────────────
 
-let pendingInjectConvs: Conversation[] = [];
-let pendingInjectMode: BriefingMode = "full";
+let pendingInjectMode: BriefingMode = "summary";
 
-function showConfirmModal(convs: Conversation[], onConfirm: (mode: BriefingMode) => void): void {
-  pendingInjectConvs = convs;
-  pendingInjectMode  = briefingMode;
+function buildLocalBriefing(convs: Conversation[], mode: BriefingMode): string {
+  return convs.length === 1
+    ? buildBriefing(convs[0]!, mode)
+    : buildMergedBriefing(convs, mode === "full" ? "summary" : mode);
+}
 
-  // Populate list
+function showConfirmModal(
+  convs: Conversation[],
+  onInject: (text: string) => void,
+  ragAvailable = false,
+): void {
+  pendingInjectMode = briefingMode;
+
   confirmList.innerHTML = "";
   convs.forEach((c) => {
     const item = document.createElement("div");
@@ -508,7 +522,6 @@ function showConfirmModal(convs: Conversation[], onConfirm: (mode: BriefingMode)
     confirmList.appendChild(item);
   });
 
-  // Mode buttons
   confirmModal.querySelectorAll<HTMLButtonElement>(".confirm-mode-btn").forEach((btn) => {
     btn.classList.toggle("active", btn.dataset.mode === pendingInjectMode);
     btn.onclick = () => {
@@ -518,6 +531,9 @@ function showConfirmModal(convs: Conversation[], onConfirm: (mode: BriefingMode)
     };
   });
 
+  confirmIntentRow.classList.toggle("hidden", !ragAvailable);
+  confirmIntentInput.value = "";
+
   confirmModal.classList.remove("hidden");
 
   const cleanup = () => { confirmModal.classList.add("hidden"); };
@@ -525,22 +541,91 @@ function showConfirmModal(convs: Conversation[], onConfirm: (mode: BriefingMode)
   confirmCancel.onclick = cleanup;
   confirmModal.onclick = (e) => { if (e.target === confirmModal) cleanup(); };
 
-  confirmInject.onclick = () => {
-    cleanup();
-    onConfirm(pendingInjectMode);
+  confirmInject.onclick = async () => {
+    const intent = confirmIntentInput.value.trim();
+    if (ragAvailable && intent.length > 0) {
+      confirmInject.textContent = "Retrieving…";
+      (confirmInject as HTMLButtonElement).disabled = true;
+      try {
+        const res = await send<{ success: boolean; text: string | null }>({
+          type: "TRANSFER_CONTEXT",
+          payload: { selectedConversationIds: convs.map((c) => c.id), intent },
+        });
+        cleanup();
+        if (res.success && res.text) {
+          onInject(res.text);
+        } else {
+          showToast("Smart retrieval failed — using summary");
+          onInject(buildLocalBriefing(convs, pendingInjectMode));
+        }
+      } catch {
+        cleanup();
+        showToast("Smart retrieval failed — using summary");
+        onInject(buildLocalBriefing(convs, pendingInjectMode));
+      } finally {
+        confirmInject.textContent = "Inject context →";
+        (confirmInject as HTMLButtonElement).disabled = false;
+      }
+    } else {
+      cleanup();
+      onInject(buildLocalBriefing(convs, pendingInjectMode));
+    }
+  };
+}
+
+// ── Transfer modal ─────────────────────────────────────────────────────────────
+
+function showTransferModal(): void {
+  transferIntent.value = "";
+  transferModal.classList.remove("hidden");
+  transferIntent.focus();
+
+  const cleanup = () => { transferModal.classList.add("hidden"); };
+
+  transferCancel.onclick = cleanup;
+  transferModal.onclick = (e) => { if (e.target === transferModal) cleanup(); };
+
+  transferConfirm.onclick = async () => {
+    const intent = transferIntent.value.trim();
+    const ids = [...selectedItems.keys()];
+
+    transferConfirm.textContent = "Retrieving…";
+    (transferConfirm as HTMLButtonElement).disabled = true;
+
+    try {
+      const res = await send<{ success: boolean; text: string | null }>({
+        type: "TRANSFER_CONTEXT",
+        payload: { selectedConversationIds: ids, intent },
+      });
+
+      cleanup();
+
+      if (!res.success || !res.text) {
+        showToast("Sign in to use Smart Inject");
+      } else {
+        injectTextToActiveTab(res.text, () => {
+          showToast("Smart context injected ✓");
+          clearAllSelections();
+          setTimeout(() => window.close(), 900);
+        });
+      }
+    } finally {
+      transferConfirm.textContent = "Inject context →";
+      (transferConfirm as HTMLButtonElement).disabled = false;
+    }
   };
 }
 
 function injectConversation(conv: Conversation, el: HTMLElement): void {
-  showConfirmModal([conv], (mode) => {
-    const text = buildBriefing(conv, mode);
+  const ragAvailable = session !== null && conv.processedAt !== null;
+  showConfirmModal([conv], (text) => {
     injectTextToActiveTab(text, () => {
       el.classList.add("flashing");
       setTimeout(() => el.classList.remove("flashing"), 450);
       showToast("Context injected ✓");
       setTimeout(() => window.close(), 900);
     });
-  });
+  }, ragAvailable);
 }
 
 function injectPackage(pkg: ContextPackage): void {
@@ -700,16 +785,15 @@ modePkgBtn.addEventListener("click", () => {
 generatePkgBtn.addEventListener("click", generatePackage);
 syncBtn.addEventListener("click", syncAll);
 clearSelection.addEventListener("click", clearAllSelections);
+transferBtn.addEventListener("click", showTransferModal);
 
 useSelected.addEventListener("click", () => {
   const convs = [...selectedItems.values()];
   if (!convs.length) return;
 
-  showConfirmModal(convs, (mode) => {
-    const text = convs.length === 1
-      ? buildBriefing(convs[0]!, mode)
-      : buildMergedBriefing(convs, mode === "full" ? "summary" : mode);
+  const ragAvailable = session !== null && convs.every((c) => c.processedAt !== null);
 
+  showConfirmModal(convs, (text) => {
     injectTextToActiveTab(text, () => {
       showToast(
         convs.length === 1
@@ -719,7 +803,7 @@ useSelected.addEventListener("click", () => {
       clearAllSelections();
       setTimeout(() => window.close(), 900);
     });
-  });
+  }, ragAvailable);
 });
 
 // Settings events

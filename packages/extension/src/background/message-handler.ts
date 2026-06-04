@@ -1,7 +1,7 @@
 // Handles all messages from content scripts and popup.
 // All storage and network operations go through here.
 
-import type { ExtensionMessage, Conversation, ExtensionSettings } from "../types.js";
+import type { ExtensionMessage, Conversation, ExtensionSettings, TransferSession, KnowledgeBrief } from "../types.js";
 import { makeTitle } from "../types.js";
 import {
   saveConversation,
@@ -202,6 +202,14 @@ async function dispatch(message: ExtensionMessage, respond: SendResponse): Promi
         const { getCachedSelectors } = await import("../local-db/index.js");
         const registry = await getCachedSelectors();
         respond({ success: true, data: registry });
+        break;
+      }
+
+      // ── Transfer Context ──────────────────────────────────────────────────────
+
+      case "TRANSFER_CONTEXT": {
+        const result = await transferContext(message.payload);
+        respond(result);
         break;
       }
 
@@ -476,6 +484,71 @@ function scrapeTab(tabId: number): Promise<Array<{ title: string; url: string }>
       }
     );
   });
+}
+
+// ── Transfer context via retrieve-context Edge Function ────────────────────────
+
+async function transferContext(payload: TransferSession): Promise<{
+  success: boolean;
+  text: string | null;
+}> {
+  const client = await getAuthenticatedClient();
+  if (!client) return { success: false, text: null };
+
+  const { data: { session } } = await client.auth.getSession();
+  if (!session) return { success: false, text: null };
+
+  const { selectedConversationIds, intent } = payload;
+
+  const res = await fetch(
+    `${__SUPABASE_URL__}/functions/v1/retrieve-context`,
+    {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${session.access_token}`,
+        "Content-Type":  "application/json",
+      },
+      body: JSON.stringify({ conversation_ids: selectedConversationIds, intent }),
+    }
+  );
+
+  if (!res.ok) throw new Error(await res.text());
+
+  const brief = await res.json() as KnowledgeBrief;
+  const text  = formatKnowledgeBrief(brief, selectedConversationIds.length, intent);
+
+  return { success: true, text };
+}
+
+function formatKnowledgeBrief(
+  brief: KnowledgeBrief,
+  count: number,
+  intent: string,
+): string {
+  const parts: string[] = [
+    `I have context from ${count} previous conversation${count === 1 ? "" : "s"}. Here is what is relevant to: ${intent}\n`,
+    brief.synthesizedContext,
+    "",
+  ];
+
+  for (const artifact of brief.keyArtifacts) {
+    parts.push(`**${artifact.label}**`);
+    if (artifact.type === "code") {
+      parts.push(`\`\`\`\n${artifact.content}\n\`\`\``);
+    } else {
+      parts.push(artifact.content);
+    }
+    parts.push("");
+  }
+
+  if (brief.openQuestions?.length) {
+    parts.push("**Open Questions**");
+    for (const q of brief.openQuestions) {
+      parts.push(`- ${q}`);
+    }
+  }
+
+  return parts.join("\n");
 }
 
 declare const __SUPABASE_URL__: string;

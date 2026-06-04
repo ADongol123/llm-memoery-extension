@@ -17,6 +17,9 @@ export type {
   SelectorRegistry,
   SidebarItem,
   AuthSession,
+  Chunk,
+  KnowledgeBrief,
+  TransferSession,
   ExtensionMessage,
   ExtensionSettings,
 } from "@llm-memory/shared";
