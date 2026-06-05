@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "LLM Memory",
   "version": "4.0.0",
-  "description": "Your conversations across Claude, ChatGPT, Grok, Gemini and DeepSeek — in one place. Generate Context Packages and continue any conversation on any AI.",
+  "description": "Your conversations across Claude, ChatGPT, Gemini, Grok, DeepSeek, Perplexity, Copilot, Mistral, Meta AI and Poe — in one place. Inject relevant context into any new chat.",
 
   "permissions": [
     "storage",
@@ -23,6 +23,12 @@
     "https://www.perplexity.ai/*",
     "https://grok.com/*",
     "https://chat.deepseek.com/*",
+    "https://copilot.microsoft.com/*",
+    "https://www.bing.com/chat*",
+    "https://chat.mistral.ai/*",
+    "https://meta.ai/*",
+    "https://www.meta.ai/*",
+    "https://poe.com/*",
     "https://*.supabase.co/*"
   ],
 
@@ -74,7 +80,12 @@
         "https://perplexity.ai/*",
         "https://www.perplexity.ai/*",
         "https://grok.com/*",
-        "https://chat.deepseek.com/*"
+        "https://chat.deepseek.com/*",
+        "https://copilot.microsoft.com/*",
+        "https://chat.mistral.ai/*",
+        "https://meta.ai/*",
+        "https://www.meta.ai/*",
+        "https://poe.com/*"
       ],
       "js": ["content.js"],
       "run_at": "document_idle"

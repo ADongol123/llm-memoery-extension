@@ -179,10 +179,12 @@ async function dispatch(message: ExtensionMessage, respond: SendResponse): Promi
       // ── Sync ─────────────────────────────────────────────────────────────────
 
       case "SYNC_NOW": {
-        const results = await syncSidebars();
-        // Also try Supabase sync (silently skips if not authed)
+        // Respond immediately so the popup doesn't need to stay open for the
+        // full sync (which opens background tabs and can take 30–60 s).
+        // The popup listens on chrome.storage.onChanged to refresh automatically.
+        respond({ success: true });
+        syncSidebars().catch(() => {});
         syncNow().catch(() => {});
-        respond({ success: true, results });
         break;
       }
 
@@ -373,97 +375,153 @@ async function bumpAnalytic(key: string): Promise<void> {
 }
 
 // ── Sidebar sync ───────────────────────────────────────────────────────────────
-// For each LLM platform:
-//   1. If a tab is already open → scrape it directly (fast path)
-//   2. Otherwise → open a background tab, wait for render, scrape, then close it
-// Results cached in chrome.storage.local as llm_sidebar_cache.
+// All platforms scraped in parallel. Each platform:
+//   1. Fast path — tab already open → scrape directly.
+//   2. Slow path — open background tab (active:false), wait for SPA render, scrape, close.
+// Each platform writes its result immediately to llm_sidebar_cache so the popup
+// can update incrementally. Results are never overwritten with [] — stale cache
+// is preserved when a platform fails to load.
 
 const SEED_URLS: Record<string, string> = {
-  Claude:   "https://claude.ai/new",
-  ChatGPT:  "https://chatgpt.com",
-  Grok:     "https://grok.com",
-  Gemini:   "https://gemini.google.com/app",
-  DeepSeek: "https://chat.deepseek.com",
+  Claude:      "https://claude.ai/new",
+  ChatGPT:     "https://chatgpt.com",
+  Grok:        "https://grok.com",
+  Gemini:      "https://gemini.google.com/app",
+  DeepSeek:    "https://chat.deepseek.com",
+  Perplexity:  "https://www.perplexity.ai",
+  Copilot:     "https://copilot.microsoft.com",
+  Mistral:     "https://chat.mistral.ai/chat",
+  MetaAI:      "https://www.meta.ai",
+  Poe:         "https://poe.com",
 };
 
 const DOMAIN_MAP: Record<string, string> = {
-  "claude.ai":          "Claude",
-  "chatgpt.com":        "ChatGPT",
-  "chat.openai.com":    "ChatGPT",
-  "gemini.google.com":  "Gemini",
-  "grok.com":           "Grok",
-  "chat.deepseek.com":  "DeepSeek",
+  "claude.ai":                "Claude",
+  "chatgpt.com":              "ChatGPT",
+  "chat.openai.com":          "ChatGPT",
+  "gemini.google.com":        "Gemini",
+  "grok.com":                 "Grok",
+  "chat.deepseek.com":        "DeepSeek",
+  "perplexity.ai":            "Perplexity",
+  "copilot.microsoft.com":    "Copilot",
+  "bing.com":                 "Copilot",
+  "chat.mistral.ai":          "Mistral",
+  "meta.ai":                  "MetaAI",
+  "poe.com":                  "Poe",
 };
 
+// Keeps the MV3 service worker alive during long async waits by chaining a
+// Chrome API call every 20 s (workers are killed after ~30 s of JS idle time).
+function keepAlive(signal: { stop: boolean }): void {
+  if (signal.stop) return;
+  chrome.storage.local.get("_sw_ping", () => {
+    if (!signal.stop) setTimeout(() => keepAlive(signal), 20_000);
+  });
+}
+
 async function syncSidebars(): Promise<Record<string, number>> {
-  const platforms = Object.keys(SEED_URLS);
-  const results: Record<string, number> = {};
+  const ka = { stop: false };
+  keepAlive(ka);
 
-  // Find already-open LLM tabs
-  const allTabs = await chrome.tabs.query({});
-  const openTabMap: Record<string, chrome.tabs.Tab> = {};
-  for (const tab of allTabs) {
-    if (!tab.url) continue;
-    try {
-      const host = new URL(tab.url).hostname;
-      for (const [domain, name] of Object.entries(DOMAIN_MAP)) {
-        if (host.includes(domain) && !openTabMap[name]) {
-          openTabMap[name] = tab;
-        }
-      }
-    } catch { /* skip invalid URLs */ }
-  }
+  try {
+    // Mark sync as running so the popup can show accurate state
+    await chrome.storage.local.set({ llm_sync_status: { state: "running", startedAt: Date.now() } });
 
-  for (const platform of platforms) {
-    let conversations: Array<{ title: string; url: string }> = [];
-    const existingTab = openTabMap[platform];
-
-    if (existingTab?.id) {
-      // Fast path — scrape already-open tab
-      conversations = await scrapeTab(existingTab.id);
-    } else {
-      // Slow path — open a background tab, wait for SPA render, scrape, close
-      const seedUrl = SEED_URLS[platform];
-      if (!seedUrl) continue;
-
-      let tab: chrome.tabs.Tab | null = null;
+    // Build map of already-open LLM tabs
+    const allTabs = await chrome.tabs.query({});
+    const openTabMap: Record<string, chrome.tabs.Tab> = {};
+    for (const tab of allTabs) {
+      if (!tab.url) continue;
       try {
-        tab = await chrome.tabs.create({ url: seedUrl, active: false });
-
-        await new Promise<void>((res) => {
-          const onUpdated = (id: number, info: chrome.tabs.TabChangeInfo) => {
-            if (id === tab!.id && info.status === "complete") {
-              chrome.tabs.onUpdated.removeListener(onUpdated);
-              res();
-            }
-          };
-          chrome.tabs.onUpdated.addListener(onUpdated);
-          setTimeout(res, 12000); // 12 s max
-        });
-
-        // Extra wait for SPA sidebar to render
-        await new Promise((r) => setTimeout(r, 2500));
-
-        if (tab.id) conversations = await scrapeTab(tab.id);
-      } catch { /* skip this platform */ } finally {
-        if (tab?.id) chrome.tabs.remove(tab.id).catch(() => {});
-      }
+        const host = new URL(tab.url).hostname;
+        for (const [domain, name] of Object.entries(DOMAIN_MAP)) {
+          if (host.includes(domain) && !openTabMap[name]) openTabMap[name] = tab;
+        }
+      } catch { /* skip */ }
     }
 
-    results[platform] = conversations.length;
+    // Only scrape platforms the user has enabled
+    const settings        = await getSettings();
+    const enabled         = new Set(settings.enabledPlatforms ?? Object.keys(SEED_URLS));
 
-    // Persist after each platform so partial results are visible immediately
-    const existing = await new Promise<Record<string, unknown[]>>((r) =>
+    // Scrape enabled platforms in parallel — reduces worst-case time vs. sequential
+    const platformResults = await Promise.all(
+      Object.keys(SEED_URLS)
+        .filter((p) => enabled.has(p))
+        .map((platform) => scrapePlatform(platform, openTabMap[platform]))
+    );
+
+    const results: Record<string, number> = {};
+    platformResults.forEach(({ platform, count }) => { results[platform] = count; });
+
+    await chrome.storage.local.set({
+      llm_sync_status: { state: "done", completedAt: Date.now(), results },
+    });
+
+    return results;
+  } finally {
+    ka.stop = true;
+  }
+}
+
+async function scrapePlatform(
+  platform: string,
+  existingTab: chrome.tabs.Tab | undefined,
+): Promise<{ platform: string; count: number }> {
+  let conversations: Array<{ title: string; url: string }> = [];
+
+  if (existingTab?.id) {
+    conversations = await scrapeTabWithTimeout(existingTab.id);
+  } else {
+    const seedUrl = SEED_URLS[platform];
+    if (!seedUrl) return { platform, count: 0 };
+
+    let tab: chrome.tabs.Tab | null = null;
+    try {
+      tab = await chrome.tabs.create({ url: seedUrl, active: false });
+
+      // Wait for page to fully load (Chrome API callback keeps SW alive)
+      await new Promise<void>((res) => {
+        const onUpdated = (id: number, info: chrome.tabs.TabChangeInfo) => {
+          if (id === tab!.id && info.status === "complete") {
+            chrome.tabs.onUpdated.removeListener(onUpdated);
+            res();
+          }
+        };
+        chrome.tabs.onUpdated.addListener(onUpdated);
+        setTimeout(res, 12_000); // 12 s hard cap
+      });
+
+      // Extra wait for SPA sidebar to render
+      await new Promise((r) => setTimeout(r, 2500));
+
+      if (tab.id) conversations = await scrapeTabWithTimeout(tab.id);
+    } catch { /* skip */ } finally {
+      if (tab?.id) chrome.tabs.remove(tab.id).catch(() => {});
+    }
+  }
+
+  // Only write to cache when we got data — never overwrite good cache with []
+  if (conversations.length > 0) {
+    const stored = await new Promise<Record<string, unknown[]>>((r) =>
       chrome.storage.local.get("llm_sidebar_cache", (res) =>
         r((res.llm_sidebar_cache ?? {}) as Record<string, unknown[]>)
       )
     );
     await chrome.storage.local.set({
-      llm_sidebar_cache: { ...existing, [platform]: conversations },
+      llm_sidebar_cache: { ...stored, [platform]: conversations },
     });
   }
 
-  return results;
+  return { platform, count: conversations.length };
+}
+
+// 5 s hard timeout per tab — a wedged content script can't block the whole sync
+function scrapeTabWithTimeout(tabId: number): Promise<Array<{ title: string; url: string }>> {
+  return Promise.race([
+    scrapeTab(tabId),
+    new Promise<Array<{ title: string; url: string }>>((r) => setTimeout(() => r([]), 5_000)),
+  ]);
 }
 
 function scrapeTab(tabId: number): Promise<Array<{ title: string; url: string }>> {

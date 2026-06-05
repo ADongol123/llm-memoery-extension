@@ -4,7 +4,7 @@
 
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
 import type { Conversation, ContextPackage, ExtensionSettings, SelectorRegistry } from "../types.js";
-import { DEFAULT_SETTINGS } from "../types.js";
+import { DEFAULT_SETTINGS, ALL_PLATFORMS } from "../types.js";
 
 const DB_NAME    = "llm-memory";
 const DB_VERSION = 1;
@@ -147,8 +147,11 @@ export async function deletePackage(id: string): Promise<void> {
 // ── Settings ───────────────────────────────────────────────────────────────────
 
 export async function getSettings(): Promise<ExtensionSettings> {
-  const db  = await getDB();
-  return (await db.get("settings", "settings")) ?? DEFAULT_SETTINGS;
+  const db     = await getDB();
+  const stored = await db.get("settings", "settings");
+  if (!stored) return DEFAULT_SETTINGS;
+  if (!stored.enabledPlatforms) stored.enabledPlatforms = [...ALL_PLATFORMS];
+  return stored;
 }
 
 export async function saveSettings(settings: ExtensionSettings): Promise<void> {

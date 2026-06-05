@@ -10,75 +10,70 @@ import type {
   BriefingMode,
   Platform,
 } from "../types.js";
-import { buildBriefing, buildMergedBriefing, DEFAULT_SETTINGS } from "../types.js";
-
-// ── Constants ──────────────────────────────────────────────────────────────────
-
-const PLATFORMS: Platform[] = ["Claude", "ChatGPT", "Gemini", "Grok", "DeepSeek"];
+import { buildBriefing, buildMergedBriefing, DEFAULT_SETTINGS, ALL_PLATFORMS } from "../types.js";
 
 // ── State ──────────────────────────────────────────────────────────────────────
 
-let conversations:   Conversation[]   = [];
-let packages:        ContextPackage[] = [];
-let settings:        ExtensionSettings = DEFAULT_SETTINGS;
-let session:         AuthSession | null = null;
-let activeTab:       Platform | "All" = "All";
-let viewMode:        "conversations" | "packages" = "conversations";
-let searchQuery:     string = "";
-let briefingMode:    BriefingMode = "full";
-let selectedItems:   Map<string, Conversation> = new Map();
-let isGeneratingPkg  = false;
-let isSyncing        = false;
-let sidebarCache:    Record<string, Array<{ title: string; url: string }>> = {};
+let conversations:  Conversation[]   = [];
+let packages:       ContextPackage[] = [];
+let settings:       ExtensionSettings = DEFAULT_SETTINGS;
+let session:        AuthSession | null = null;
+let activeTab:      Platform | "All" = "All";
+let viewMode:       "conversations" | "packages" = "conversations";
+let searchQuery:    string = "";
+let briefingMode:   BriefingMode = "full";
+let selectedItems:  Map<string, Conversation> = new Map();
+let isGeneratingPkg      = false;
+let isSyncing            = false;
+let sidebarCache:        Record<string, Array<{ title: string; url: string }>> = {};
+let selectedDiscovered:  Map<string, { title: string; url: string; platform: string }> = new Map();
 
 // ── DOM refs ───────────────────────────────────────────────────────────────────
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
-const toggleInput    = $<HTMLInputElement>("toggleInput");
-const statusText     = $("statusText");
-const offState       = $("offState");
-const mainPanel      = $("mainPanel");
-const settingsPanel  = $("settingsPanel");
-const settingsBtn    = $("settingsBtn");
-const settingsBack   = $("settingsBack");
-const searchInput    = $<HTMLInputElement>("searchInput");
-const clearSearch    = $("clearSearch");
-const tabBar         = $("tabBar");
-const modeConvBtn    = $("modeConvBtn");
-const modePkgBtn     = $("modePkgBtn");
-const generatePkgBtn = $("generatePkgBtn");
-const syncBtn        = $("syncBtn");
-const selectionBar   = $("selectionBar");
-const selectionCount = $("selectionCount");
-const clearSelection = $("clearSelection");
-const useSelected    = $("useSelected");
-const transferBtn    = $("transferBtn");
-const itemList       = $("itemList");
-const toast          = $("toast");
-const confirmModal       = $("confirmModal");
-const confirmList        = $("confirmList");
-const confirmCancel      = $("confirmCancel");
-const confirmInject      = $("confirmInject");
-const confirmIntentRow   = $("confirmIntentRow");
-const confirmIntentInput = $<HTMLInputElement>("confirmIntentInput");
-const transferModal  = $("transferModal");
-const transferIntent = $<HTMLInputElement>("transferIntent");
-const transferCancel = $("transferCancel");
-const transferConfirm = $("transferConfirm");
-const selectHint     = $("selectHint");
+const toggleInput       = $<HTMLInputElement>("toggleInput");
+const statusText        = $("statusText");
+const offState          = $("offState");
+const mainPanel         = $("mainPanel");
+const settingsPanel     = $("settingsPanel");
+const platformSelectPanel = $("platformSelectPanel");
+const platformCheckboxes  = $("platformCheckboxes");
+const platformSyncBtn     = $("platformSyncBtn");
+const settingsBtn       = $("settingsBtn");
+const settingsBack      = $("settingsBack");
+const editPlatformsBtn  = $("editPlatformsBtn");
+const searchInput       = $<HTMLInputElement>("searchInput");
+const clearSearch       = $("clearSearch");
+const tabBar            = $("tabBar");
+const modeConvBtn       = $("modeConvBtn");
+const modePkgBtn        = $("modePkgBtn");
+const generatePkgBtn    = $("generatePkgBtn");
+const syncBtn           = $("syncBtn");
+const selectionBar      = $("selectionBar");
+const selectionCount    = $("selectionCount");
+const clearSelection    = $("clearSelection");
+const intentInput       = $<HTMLInputElement>("intentInput");
+const useSelected       = $("useSelected");
+const itemList          = $("itemList");
+const toast             = $("toast");
+const confirmModal      = $("confirmModal");
+const confirmList       = $("confirmList");
+const confirmCancel     = $("confirmCancel");
+const confirmInject     = $("confirmInject");
+const selectHint        = $("selectHint");
 
 // Settings panel
-const autoSaveToggle = $<HTMLInputElement>("autoSaveToggle");
-const pickerToggle   = $<HTMLInputElement>("pickerToggle");
-const emailInput     = $<HTMLInputElement>("emailInput");
-const signInBtn      = $("signInBtn");
-const signInMsg      = $("signInMsg");
-const authSignedOut  = $("authSignedOut");
-const authSignedIn   = $("authSignedIn");
-const signedInEmail  = $("signedInEmail");
-const signOutBtn     = $("signOutBtn");
-const clearAllBtn    = $("clearAllBtn");
+const autoSaveToggle  = $<HTMLInputElement>("autoSaveToggle");
+const pickerToggle    = $<HTMLInputElement>("pickerToggle");
+const emailInput      = $<HTMLInputElement>("emailInput");
+const signInBtn       = $("signInBtn");
+const signInMsg       = $("signInMsg");
+const authSignedOut   = $("authSignedOut");
+const authSignedIn    = $("authSignedIn");
+const signedInEmail   = $("signedInEmail");
+const signOutBtn      = $("signOutBtn");
+const clearAllBtn     = $("clearAllBtn");
 
 // ── Toast ──────────────────────────────────────────────────────────────────────
 
@@ -121,10 +116,58 @@ async function loadAll(): Promise<void> {
   if (cacheRes.success) sidebarCache = cacheRes.data ?? {};
 
   briefingMode = settings.defaultBriefingMode ?? "full";
-  render();
+}
+
+// ── Platform selection screen ──────────────────────────────────────────────────
+
+function showPlatformSelect(fromSettings = false): void {
+  mainPanel.classList.add("hidden");
+  settingsPanel.classList.add("hidden");
+  platformSelectPanel.classList.remove("hidden");
+
+  const enabled = new Set(settings.enabledPlatforms ?? ALL_PLATFORMS);
+
+  platformCheckboxes.innerHTML = "";
+  ALL_PLATFORMS.forEach((platform) => {
+    const label = document.createElement("label");
+    label.className = "platform-option";
+    label.innerHTML = `
+      <input type="checkbox" class="platform-check" value="${platform}" ${enabled.has(platform) ? "checked" : ""} />
+      <span class="platform-option-name">${platform}</span>
+    `;
+    platformCheckboxes.appendChild(label);
+  });
+
+  platformSyncBtn.onclick = async () => {
+    const checked = Array.from(
+      platformCheckboxes.querySelectorAll<HTMLInputElement>(".platform-check:checked")
+    ).map((el) => el.value as Platform);
+
+    if (checked.length === 0) {
+      showToast("Select at least one platform");
+      return;
+    }
+
+    settings.enabledPlatforms = checked;
+    await send({ type: "SAVE_SETTINGS", settings });
+
+    platformSelectPanel.classList.add("hidden");
+
+    if (fromSettings) {
+      showSettings();
+    } else {
+      mainPanel.classList.remove("hidden");
+      render();
+      syncAll();
+    }
+  };
 }
 
 // ── Tab logic ──────────────────────────────────────────────────────────────────
+
+function getEnabledPlatforms(): Platform[] {
+  return (settings.enabledPlatforms ?? ALL_PLATFORMS) as Platform[];
+}
 
 function getFilteredConversations(): Conversation[] {
   let items = activeTab === "All"
@@ -157,14 +200,14 @@ function render(): void {
   else renderPackages();
   updateSelectionBar();
 
-  // Show selection hint only when there are conversations and nothing is selected
   const hasItems = conversations.length > 0 || Object.keys(sidebarCache).length > 0;
   selectHint.classList.toggle("hidden", !hasItems || selectedItems.size > 0 || viewMode !== "conversations");
 }
 
 function renderTabs(): void {
   tabBar.innerHTML = "";
-  const tabs: Array<Platform | "All"> = ["All", ...PLATFORMS];
+  const enabled = getEnabledPlatforms();
+  const tabs: Array<Platform | "All"> = ["All", ...enabled];
 
   tabs.forEach((label) => {
     const btn = document.createElement("button");
@@ -182,6 +225,7 @@ function renderTabs(): void {
     btn.innerHTML = `${label}${total ? ` <span class="tab-count">${total}</span>` : ""}`;
     btn.addEventListener("click", () => {
       activeTab = label;
+      selectedDiscovered.clear();
       render();
     });
     tabBar.appendChild(btn);
@@ -192,7 +236,6 @@ function renderConversations(): void {
   itemList.innerHTML = "";
   const items = getFilteredConversations();
 
-  // Discovered items from sidebar cache, filtered by active tab
   const discoveredItems = getDiscoveredItems();
   const savedUrls = new Set(conversations.map((c) => c.sourceUrl).filter(Boolean));
   const newDiscovered = discoveredItems.filter((d) => !savedUrls.has(d.url));
@@ -225,7 +268,7 @@ function renderConversations(): void {
   }
 
   if (newDiscovered.length) {
-    appendDivider("Discovered on your LLMs");
+    appendDivider("Discovered — open to capture");
     newDiscovered.forEach((d) => { itemList.appendChild(makeSidebarItem(d)); });
   }
 }
@@ -233,7 +276,10 @@ function renderConversations(): void {
 function getDiscoveredItems(): Array<{ title: string; url: string; platform: string }> {
   const result: Array<{ title: string; url: string; platform: string }> = [];
   const platformFilter = activeTab === "All" ? null : activeTab;
+  const enabled = new Set(getEnabledPlatforms());
+
   for (const [platform, items] of Object.entries(sidebarCache)) {
+    if (!enabled.has(platform as Platform)) continue;
     if (platformFilter && platform !== platformFilter) continue;
     if (!searchQuery) {
       items.forEach((item) => result.push({ ...item, platform }));
@@ -271,29 +317,30 @@ function renderEmpty(): void {
   const empty = document.createElement("div");
   empty.className = "empty-state";
 
+  const enabled = getEnabledPlatforms();
+
   if (searchQuery) {
     empty.innerHTML = `<div class="empty-icon">⊘</div><div>No results for "${escHtml(searchQuery)}"</div>`;
   } else if (activeTab !== "All") {
     empty.innerHTML = `
       <div class="empty-icon">↗</div>
       <div style="font-weight:600;">No ${activeTab} conversations yet</div>
-      <div class="empty-hint">Open ${activeTab}, start a chat with a few messages, and they'll appear here automatically.</div>
+      <div class="empty-hint">Open ${activeTab}, start a chat, and it'll appear here automatically.</div>
       <div class="empty-hint" style="margin-top:6px;">Or click <strong>⟳ Sync</strong> to scan your open tabs now.</div>
     `;
   } else {
+    const platformList = enabled.slice(0, 5).join(", ") + (enabled.length > 5 ? "…" : "");
     empty.innerHTML = `
       <div class="empty-icon">⬡</div>
       <div style="font-weight:600;">No conversations saved yet</div>
-      <div class="empty-hint" style="margin-top:8px;">
-        <strong>How to get started:</strong>
-      </div>
+      <div class="empty-hint" style="margin-top:8px;"><strong>How to get started:</strong></div>
       <ol class="empty-steps">
-        <li>Open Claude, ChatGPT, Gemini, Grok, or DeepSeek</li>
+        <li>Open ${platformList}</li>
         <li>Have a conversation (4+ messages)</li>
         <li>Conversations auto-save every 30 seconds</li>
-        <li>Come back here, select one or more, then click <strong>Use selected →</strong></li>
+        <li>Come back here, select one or more, then click <strong>Inject →</strong></li>
       </ol>
-      <div class="empty-hint" style="margin-top:10px;">Already chatting? Click <strong>⟳ Sync</strong> above to import now.</div>
+      <div class="empty-hint" style="margin-top:10px;">Already chatting? Click <strong>⟳ Sync</strong> above.</div>
     `;
   }
 
@@ -319,14 +366,13 @@ function appendDivider(text: string): void {
 function makeConvItem(conv: Conversation, num: number): HTMLElement {
   const key        = conv.id;
   const isSelected = selectedItems.has(key);
-  const showPlatform = activeTab === "All";
   const hasAI      = !!conv.processedAt;
 
   const el = document.createElement("div");
   el.className = [
     "item",
     conv.pinned   ? "pinned"   : "",
-    isSelected ? "selected" : "",
+    isSelected    ? "selected" : "",
   ].filter(Boolean).join(" ");
   el.style.animationDelay = `${Math.min(num - 1, 8) * 0.025}s`;
 
@@ -343,9 +389,11 @@ function makeConvItem(conv: Conversation, num: number): HTMLElement {
     <div class="item-body">
       <div class="item-title" title="${escHtml(conv.title)}">${escHtml(conv.title)}</div>
       <div class="item-meta">
-        ${showPlatform ? `<span class="platform-badge">${conv.platform}</span>` : ""}
+        <span class="platform-badge">${conv.platform}</span>
         ${conv.isSnippet ? `<span class="snippet-badge">snippet</span>` : ""}
-        ${hasAI ? `<span class="ai-badge">✦ AI</span>` : ""}
+        ${hasAI
+          ? `<span class="ai-badge rag-ready" title="Smart inject available">✦ smart</span>`
+          : `<span class="ai-badge local-only" title="Local inject only">≈ local</span>`}
         <span>${timestamp}</span>
         ${!conv.isSnippet ? `<span>·</span><span>${conv.messageCount} msgs</span>` : ""}
       </div>
@@ -353,59 +401,92 @@ function makeConvItem(conv: Conversation, num: number): HTMLElement {
     <span class="item-arrow">→</span>
   `;
 
-  // Checkbox
   el.querySelector(".item-check")!.addEventListener("click", (e) => {
     e.stopPropagation();
     toggleSelect(conv, el);
   });
 
-  // Pin
   el.querySelector(".pin-btn")!.addEventListener("click", (e) => {
     e.stopPropagation();
     togglePin(conv);
   });
 
-  // Row click
   el.addEventListener("click", (e) => {
     if ((e.target as HTMLElement).closest(".item-check, .pin-btn")) return;
     if (selectedItems.size > 0) {
       toggleSelect(conv, el);
     } else {
-      injectConversation(conv, el);
+      quickInject(conv, el);
     }
   });
 
   return el;
 }
 
-// ── Sidebar-discovered item (not yet saved) ────────────────────────────────────
+// ── Sidebar-discovered item (selectable) ──────────────────────────────────────
 
 function makeSidebarItem(item: { title: string; url: string; platform: string }): HTMLElement {
+  const key        = item.url;
+  const isSelected = selectedDiscovered.has(key);
+
   const el = document.createElement("div");
-  el.className = "item sidebar-item";
+  el.className = ["item", "sidebar-item", isSelected ? "selected" : ""].filter(Boolean).join(" ");
 
   el.innerHTML = `
+    <label class="item-check" title="Select to open when injecting">
+      <input type="checkbox" class="check-input" ${isSelected ? "checked" : ""}/>
+      <span class="check-box check-box--disc">↗</span>
+    </label>
     <div class="item-body">
       <div class="item-title" title="${escHtml(item.title)}">${escHtml(item.title)}</div>
       <div class="item-meta">
         <span class="platform-badge">${escHtml(item.platform)}</span>
-        <span class="discovered-badge">not saved</span>
+        <span class="discovered-badge">not captured</span>
       </div>
     </div>
-    <button class="open-btn" title="Open conversation">Open →</button>
+    <button class="open-btn" title="Open in new tab">Open →</button>
   `;
+
+  el.querySelector(".item-check")!.addEventListener("click", (e) => {
+    e.stopPropagation();
+    toggleSelectDiscovered(item, el);
+  });
 
   el.querySelector(".open-btn")!.addEventListener("click", (e) => {
     e.stopPropagation();
     chrome.tabs.create({ url: item.url });
+    showToast("Opening — will auto-save in ~30s");
   });
 
   el.addEventListener("click", (e) => {
-    if ((e.target as HTMLElement).closest(".open-btn")) return;
-    chrome.tabs.create({ url: item.url });
+    if ((e.target as HTMLElement).closest(".item-check, .open-btn")) return;
+    // Row click toggles selection (consistent with saved items)
+    if (selectedItems.size > 0 || selectedDiscovered.size > 0) {
+      toggleSelectDiscovered(item, el);
+    } else {
+      chrome.tabs.create({ url: item.url });
+      showToast("Opening — will auto-save in ~30s");
+    }
   });
 
   return el;
+}
+
+function toggleSelectDiscovered(
+  item: { title: string; url: string; platform: string },
+  el: HTMLElement,
+): void {
+  const key = item.url;
+  if (selectedDiscovered.has(key)) {
+    selectedDiscovered.delete(key);
+    el.classList.remove("selected");
+    el.querySelector<HTMLInputElement>(".check-input")!.checked = false;
+  } else {
+    selectedDiscovered.set(key, item);
+    el.classList.add("selected");
+    el.querySelector<HTMLInputElement>(".check-input")!.checked = true;
+  }
+  updateSelectionBar();
 }
 
 // ── Package item ───────────────────────────────────────────────────────────────
@@ -470,20 +551,24 @@ function toggleSelect(conv: Conversation, el: HTMLElement): void {
 
 function clearAllSelections(): void {
   selectedItems.clear();
+  selectedDiscovered.clear();
   itemList.querySelectorAll(".item").forEach((el) => {
     el.classList.remove("selected");
-    el.querySelector<HTMLInputElement>(".check-input")!.checked = false;
+    const check = el.querySelector<HTMLInputElement>(".check-input");
+    if (check) check.checked = false;
   });
   updateSelectionBar();
 }
 
 function updateSelectionBar(): void {
-  const count = selectedItems.size;
+  const count = selectedItems.size + selectedDiscovered.size;
   selectionBar.classList.toggle("hidden", count === 0);
-  generatePkgBtn.classList.toggle("hidden", count === 0 || viewMode !== "conversations");
+  generatePkgBtn.classList.toggle("hidden", selectedItems.size === 0 || viewMode !== "conversations");
   if (count > 0) {
-    selectionCount.textContent = `${count} selected`;
-    (useSelected as HTMLButtonElement).textContent = `Use all ${count} →`;
+    const parts: string[] = [];
+    if (selectedItems.size > 0) parts.push(`${selectedItems.size} saved`);
+    if (selectedDiscovered.size > 0) parts.push(`${selectedDiscovered.size} to open`);
+    selectionCount.textContent = parts.join(" · ");
   }
 }
 
@@ -494,15 +579,90 @@ function togglePin(conv: Conversation): void {
   showToast(conv.pinned ? "Pinned ★" : "Unpinned");
 }
 
-// ── Confirmation modal ─────────────────────────────────────────────────────────
-
-let pendingInjectMode: BriefingMode = "summary";
+// ── Inject flows ───────────────────────────────────────────────────────────────
 
 function buildLocalBriefing(convs: Conversation[], mode: BriefingMode): string {
   return convs.length === 1
     ? buildBriefing(convs[0]!, mode)
     : buildMergedBriefing(convs, mode === "full" ? "summary" : mode);
 }
+
+// Single conversation quick-inject (click without selection mode)
+function quickInject(conv: Conversation, el: HTMLElement): void {
+  const ragAvailable = session !== null && conv.processedAt !== null;
+  showConfirmModal([conv], (text) => {
+    injectTextToActiveTab(text, () => {
+      el.classList.add("flashing");
+      setTimeout(() => el.classList.remove("flashing"), 450);
+      showToast("Context injected ✓");
+      setTimeout(() => window.close(), 900);
+    });
+  }, ragAvailable);
+}
+
+// Multi-select inject via selection bar "Inject →" button
+async function injectSelected(): Promise<void> {
+  const convs      = [...selectedItems.values()];
+  const discovered = [...selectedDiscovered.values()];
+
+  if (!convs.length && !discovered.length) return;
+
+  // Open discovered-only tabs so autosave can capture them
+  if (discovered.length > 0) {
+    discovered.forEach((d) => chrome.tabs.create({ url: d.url, active: false }));
+    const openMsg = `Opened ${discovered.length} conversation${discovered.length > 1 ? "s" : ""} to capture`;
+    if (!convs.length) {
+      showToast(`${openMsg} — come back in 30s to inject`);
+      clearAllSelections();
+      return;
+    }
+    showToast(`${openMsg} · injecting from ${convs.length} saved now`);
+  }
+
+  if (!convs.length) return;
+
+  const intent       = intentInput.value.trim();
+  const ragAvailable = session !== null && convs.every((c) => c.processedAt !== null);
+
+  useSelected.textContent = "Injecting…";
+  (useSelected as HTMLButtonElement).disabled = true;
+
+  try {
+    let text: string;
+
+    if (ragAvailable && intent.length > 0) {
+      try {
+        const res = await send<{ success: boolean; text: string | null }>({
+          type: "TRANSFER_CONTEXT",
+          payload: { selectedConversationIds: convs.map((c) => c.id), intent },
+        });
+        text = (res.success && res.text) ? res.text : buildLocalBriefing(convs, briefingMode);
+        if (!res.success || !res.text) showToast("Smart retrieval unavailable — using summary");
+      } catch {
+        text = buildLocalBriefing(convs, briefingMode);
+        showToast("Smart retrieval failed — using summary");
+      }
+    } else {
+      text = buildLocalBriefing(convs, briefingMode);
+    }
+
+    injectTextToActiveTab(text, () => {
+      showToast(
+        convs.length === 1
+          ? "Context injected ✓"
+          : `${convs.length} conversations merged & injected ✓`
+      );
+      clearAllSelections();
+      setTimeout(() => window.close(), 900);
+    });
+  } finally {
+    useSelected.textContent = "Inject →";
+    (useSelected as HTMLButtonElement).disabled = false;
+  }
+}
+
+// Confirmation modal for single-conversation quick-inject
+let pendingInjectMode: BriefingMode = "summary";
 
 function showConfirmModal(
   convs: Conversation[],
@@ -531,9 +691,6 @@ function showConfirmModal(
     };
   });
 
-  confirmIntentRow.classList.toggle("hidden", !ragAvailable);
-  confirmIntentInput.value = "";
-
   confirmModal.classList.remove("hidden");
 
   const cleanup = () => { confirmModal.classList.add("hidden"); };
@@ -542,7 +699,9 @@ function showConfirmModal(
   confirmModal.onclick = (e) => { if (e.target === confirmModal) cleanup(); };
 
   confirmInject.onclick = async () => {
-    const intent = confirmIntentInput.value.trim();
+    // If RAG is available and user typed an intent in the selection bar, use it
+    const intent = intentInput.value.trim();
+
     if (ragAvailable && intent.length > 0) {
       confirmInject.textContent = "Retrieving…";
       (confirmInject as HTMLButtonElement).disabled = true;
@@ -571,61 +730,6 @@ function showConfirmModal(
       onInject(buildLocalBriefing(convs, pendingInjectMode));
     }
   };
-}
-
-// ── Transfer modal ─────────────────────────────────────────────────────────────
-
-function showTransferModal(): void {
-  transferIntent.value = "";
-  transferModal.classList.remove("hidden");
-  transferIntent.focus();
-
-  const cleanup = () => { transferModal.classList.add("hidden"); };
-
-  transferCancel.onclick = cleanup;
-  transferModal.onclick = (e) => { if (e.target === transferModal) cleanup(); };
-
-  transferConfirm.onclick = async () => {
-    const intent = transferIntent.value.trim();
-    const ids = [...selectedItems.keys()];
-
-    transferConfirm.textContent = "Retrieving…";
-    (transferConfirm as HTMLButtonElement).disabled = true;
-
-    try {
-      const res = await send<{ success: boolean; text: string | null }>({
-        type: "TRANSFER_CONTEXT",
-        payload: { selectedConversationIds: ids, intent },
-      });
-
-      cleanup();
-
-      if (!res.success || !res.text) {
-        showToast("Sign in to use Smart Inject");
-      } else {
-        injectTextToActiveTab(res.text, () => {
-          showToast("Smart context injected ✓");
-          clearAllSelections();
-          setTimeout(() => window.close(), 900);
-        });
-      }
-    } finally {
-      transferConfirm.textContent = "Inject context →";
-      (transferConfirm as HTMLButtonElement).disabled = false;
-    }
-  };
-}
-
-function injectConversation(conv: Conversation, el: HTMLElement): void {
-  const ragAvailable = session !== null && conv.processedAt !== null;
-  showConfirmModal([conv], (text) => {
-    injectTextToActiveTab(text, () => {
-      el.classList.add("flashing");
-      setTimeout(() => el.classList.remove("flashing"), 450);
-      showToast("Context injected ✓");
-      setTimeout(() => window.close(), 900);
-    });
-  }, ragAvailable);
 }
 
 function injectPackage(pkg: ContextPackage): void {
@@ -669,10 +773,7 @@ async function generatePackage(): Promise<void> {
     );
 
     if (res.success && res.data) {
-      packages.unshift({
-        ...res.data.package,
-        document: res.data.document,
-      });
+      packages.unshift({ ...res.data.package, document: res.data.document });
       clearAllSelections();
       viewMode = "packages";
       modeConvBtn.classList.remove("active");
@@ -696,19 +797,10 @@ async function syncAll(): Promise<void> {
   syncBtn.classList.add("syncing");
 
   try {
-    const res = await send<{ success: boolean; results?: Record<string, number>; error?: string }>(
-      { type: "SYNC_NOW" }
-    );
-    await loadAll();
-    if (!res.success) {
-      showToast(`Sync error: ${res.error ?? "unknown"}`);
-    } else {
-      const found = Object.values(res.results ?? {}).reduce((n, v) => n + v, 0);
-      showToast(found > 0 ? `Sync complete — ${found} conversations discovered ✓` : "Sync complete ✓");
-    }
+    await send({ type: "SYNC_NOW" });
+    showToast("Syncing platforms in background…");
   } catch (e) {
     showToast(`Sync failed: ${String(e)}`);
-  } finally {
     isSyncing = false;
     syncBtn.textContent = "⟳ Sync";
     syncBtn.classList.remove("syncing");
@@ -720,6 +812,7 @@ async function syncAll(): Promise<void> {
 function showSettings(): void {
   mainPanel.classList.add("hidden");
   offState.classList.add("hidden");
+  platformSelectPanel.classList.add("hidden");
   settingsPanel.classList.remove("hidden");
 
   autoSaveToggle.checked = settings.autoSaveEnabled;
@@ -737,11 +830,7 @@ function showSettings(): void {
 
 function hideSettings(): void {
   settingsPanel.classList.add("hidden");
-  if (toggleInput.checked) {
-    mainPanel.classList.remove("hidden");
-  } else {
-    offState.classList.remove("hidden");
-  }
+  mainPanel.classList.remove("hidden");
 }
 
 async function saveSettingsNow(): Promise<void> {
@@ -761,7 +850,8 @@ toggleInput.addEventListener("change", async () => {
 });
 
 settingsBtn.addEventListener("click", showSettings);
-settingsBack.addEventListener("click", () => { saveSettingsNow(); hideSettings(); });
+settingsBack.addEventListener("click", () => { saveSettingsNow(); hideSettings(); render(); });
+editPlatformsBtn.addEventListener("click", () => showPlatformSelect(true));
 
 searchInput.addEventListener("input", () => {
   searchQuery = searchInput.value.trim();
@@ -794,26 +884,7 @@ modePkgBtn.addEventListener("click", () => {
 generatePkgBtn.addEventListener("click", generatePackage);
 syncBtn.addEventListener("click", syncAll);
 clearSelection.addEventListener("click", clearAllSelections);
-transferBtn.addEventListener("click", showTransferModal);
-
-useSelected.addEventListener("click", () => {
-  const convs = [...selectedItems.values()];
-  if (!convs.length) return;
-
-  const ragAvailable = session !== null && convs.every((c) => c.processedAt !== null);
-
-  showConfirmModal(convs, (text) => {
-    injectTextToActiveTab(text, () => {
-      showToast(
-        convs.length === 1
-          ? "Context injected ✓"
-          : `${convs.length} conversations merged & injected ✓`
-      );
-      clearAllSelections();
-      setTimeout(() => window.close(), 900);
-    });
-  }, ragAvailable);
-});
+useSelected.addEventListener("click", injectSelected);
 
 // Settings events
 autoSaveToggle.addEventListener("change", saveSettingsNow);
@@ -841,9 +912,9 @@ signOutBtn.addEventListener("click", async () => {
 
 clearAllBtn.addEventListener("click", async () => {
   if (!confirm("Clear all conversations? This cannot be undone.")) return;
-  for (const conv of conversations) {
-    await send({ type: "DELETE_CONVERSATION", id: conv.id });
-  }
+  await Promise.all(conversations.map((conv) =>
+    send({ type: "DELETE_CONVERSATION", id: conv.id })
+  ));
   conversations = [];
   render();
   showToast("All conversations cleared");
@@ -859,18 +930,45 @@ function escHtml(str: string): string {
     .replace(/"/g, "&quot;");
 }
 
+// ── Live sync updates ──────────────────────────────────────────────────────────
+
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area !== "local") return;
+
+  if ("llm_sidebar_cache" in changes) {
+    sidebarCache = (changes.llm_sidebar_cache.newValue as typeof sidebarCache) ?? {};
+    render();
+  }
+
+  if ("llm_sync_status" in changes) {
+    const status = changes.llm_sync_status.newValue as { state: string; results?: Record<string, number> } | undefined;
+    if (status?.state === "done") {
+      isSyncing = false;
+      syncBtn.textContent = "⟳ Sync";
+      syncBtn.classList.remove("syncing");
+      const total = Object.values(status.results ?? {}).reduce((n, v) => n + v, 0);
+      showToast(total > 0 ? `Sync complete — ${total} conversations found ✓` : "Sync complete ✓");
+    }
+  }
+});
+
 // ── Init ───────────────────────────────────────────────────────────────────────
 
 async function init(): Promise<void> {
-  // Main panel is always visible — the toggle only controls auto-save
   offState.classList.add("hidden");
-  mainPanel.classList.remove("hidden");
 
   await loadAll();
 
-  // Sync toggle state to stored auto-save setting
   toggleInput.checked    = settings.autoSaveEnabled !== false;
   statusText.textContent = toggleInput.checked ? "Saving" : "Paused";
+
+  // First-run: show platform selection screen if enabledPlatforms has never been set
+  if (!settings.enabledPlatforms) {
+    showPlatformSelect(false);
+  } else {
+    mainPanel.classList.remove("hidden");
+    render();
+  }
 }
 
 init().catch(console.error);

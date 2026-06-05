@@ -24,4 +24,4 @@ export type {
   ExtensionSettings,
 } from "@llm-memory/shared";
 
-export { DEFAULT_SETTINGS, buildBriefing, buildMergedBriefing, buildPackageBriefing, makeTitle, trimMessages } from "@llm-memory/shared";
+export { DEFAULT_SETTINGS, ALL_PLATFORMS, buildBriefing, buildMergedBriefing, buildPackageBriefing, makeTitle, trimMessages } from "@llm-memory/shared";

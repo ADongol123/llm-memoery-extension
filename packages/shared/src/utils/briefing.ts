@@ -203,6 +203,10 @@ export function platformColor(platform: Platform): string {
     Grok:       "#ffffff",
     DeepSeek:   "#4d6bfe",
     Perplexity: "#20b2aa",
+    Copilot:    "#0078d4",
+    Mistral:    "#ff7000",
+    MetaAI:     "#0082fb",
+    Poe:        "#9b59b6",
     Unknown:    "#888888",
   };
   return colors[platform] ?? "#888888";

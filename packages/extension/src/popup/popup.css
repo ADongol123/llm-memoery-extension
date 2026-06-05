@@ -14,6 +14,10 @@
   --danger:    #ef4444;
   --radius:    10px;
   --radius-sm: 6px;
+  /* aliases used in confirm modal */
+  --surface:   #111;
+  --surface2:  #161616;
+  --text:      #f0f0f0;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -228,8 +232,8 @@ body {
 
 .selection-bar {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 6px;
   padding: 8px 12px;
   background: rgba(99,102,241,0.12);
   border-top: 1px solid rgba(99,102,241,0.3);
@@ -237,8 +241,14 @@ body {
   font-size: 11px;
   color: var(--accent-h);
   flex-shrink: 0;
-  gap: 8px;
 }
+
+.sel-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
 .sel-count-wrap { display: flex; align-items: center; gap: 6px; }
 .sel-dot {
   width: 8px; height: 8px;
@@ -247,27 +257,56 @@ body {
   flex-shrink: 0;
   box-shadow: 0 0 6px rgba(99,102,241,0.6);
 }
-.sel-actions { display: flex; gap: 6px; }
-.sel-btn {
+
+.sel-btn-clear {
   background: none;
-  border: 1px solid rgba(99,102,241,0.4);
+  border: none;
+  color: var(--text3);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 2px;
+  line-height: 1;
+  transition: color 0.12s;
+}
+.sel-btn-clear:hover { color: var(--text2); }
+
+.sel-intent-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.intent-input {
+  flex: 1;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid rgba(99,102,241,0.35);
   border-radius: var(--radius-sm);
-  color: var(--accent-h);
+  color: var(--text1);
+  font-family: inherit;
+  font-size: 11.5px;
+  padding: 5px 9px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.intent-input:focus { border-color: var(--accent); }
+.intent-input::placeholder { color: var(--text3); }
+
+.sel-btn-inject {
+  background: var(--accent);
+  border: none;
+  border-radius: var(--radius-sm);
+  color: #fff;
   cursor: pointer;
   font-family: inherit;
-  font-size: 11px;
-  font-weight: 600;
-  padding: 4px 10px;
-  transition: all 0.12s;
-}
-.sel-btn:hover { background: rgba(99,102,241,0.15); }
-.sel-btn.primary {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
+  font-size: 11.5px;
   font-weight: 700;
+  padding: 5px 12px;
+  white-space: nowrap;
+  transition: opacity 0.12s;
+  flex-shrink: 0;
 }
-.sel-btn.primary:hover { background: var(--accent-h); border-color: var(--accent-h); }
+.sel-btn-inject:hover   { opacity: 0.85; }
+.sel-btn-inject:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* ── Item list ────────────────────────────────────────────────────────────── */
 
@@ -428,8 +467,14 @@ body {
   font-size: 9px;
   padding: 1px 4px;
   border-radius: 3px;
+}
+.ai-badge.rag-ready {
   background: rgba(16,185,129,0.12);
   color: #10b981;
+}
+.ai-badge.local-only {
+  background: rgba(80,80,80,0.15);
+  color: var(--text3);
 }
 
 .item-arrow {
@@ -672,8 +717,13 @@ body {
 }
 
 /* ── Sidebar-discovered items ── */
-.sidebar-item { opacity: 0.75; }
+.sidebar-item { opacity: 0.78; }
 .sidebar-item:hover { opacity: 1; }
+.sidebar-item.selected { opacity: 1; }
+
+/* Discovered item checkbox shows ↗ instead of a number */
+.check-box--disc::before { content: "↗" !important; font-size: 11px; }
+.check-input:checked + .check-box--disc::before { content: "✓" !important; }
 .discovered-badge {
   font-size: 9px;
   font-weight: 700;
@@ -934,4 +984,109 @@ body {
   border-radius: 4px;
   padding: 1px 7px;
   font-size: 11px;
+}
+
+/* ── Platform selection panel ─────────────────────────────────────────────── */
+
+.platform-select-panel {
+  display: flex;
+  flex-direction: column;
+  padding: 20px 16px 16px;
+  gap: 16px;
+  height: calc(100% - 49px); /* subtract header height */
+  overflow-y: auto;
+}
+
+.platform-select-header { text-align: center; }
+.platform-select-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text1);
+  margin-bottom: 4px;
+}
+.platform-select-sub {
+  font-size: 11.5px;
+  color: var(--text3);
+}
+
+.platform-checkboxes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.platform-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  user-select: none;
+}
+.platform-option:hover {
+  background: var(--bg3);
+  border-color: var(--border2);
+}
+.platform-option:has(.platform-check:checked) {
+  border-color: var(--accent);
+  background: rgba(99,102,241,0.08);
+}
+
+.platform-check {
+  width: 14px; height: 14px;
+  accent-color: var(--accent);
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.platform-option-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text2);
+}
+.platform-option:has(.platform-check:checked) .platform-option-name {
+  color: var(--text1);
+}
+
+.platform-select-footer {
+  margin-top: auto;
+}
+
+.platform-sync-btn {
+  width: 100%;
+  background: var(--accent);
+  border: none;
+  border-radius: var(--radius);
+  color: #fff;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 11px;
+  transition: opacity 0.12s;
+}
+.platform-sync-btn:hover { opacity: 0.85; }
+
+/* ── Edit platforms button in settings ───────────────────────────────────── */
+
+.edit-platforms-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--accent-h);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  transition: all 0.12s;
+  white-space: nowrap;
+}
+.edit-platforms-btn:hover {
+  background: rgba(99,102,241,0.1);
+  border-color: var(--accent);
 }

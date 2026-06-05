@@ -1,4 +1,4 @@
-export type Platform = "Claude" | "ChatGPT" | "Gemini" | "Grok" | "DeepSeek" | "Perplexity" | "Unknown";
+export type Platform = "Claude" | "ChatGPT" | "Gemini" | "Grok" | "DeepSeek" | "Perplexity" | "Copilot" | "Mistral" | "MetaAI" | "Poe" | "Unknown";
 export type BriefingMode = "full" | "summary" | "keypoints";
 export interface Message {
     role: "user" | "assistant" | "system";
@@ -211,6 +211,8 @@ export interface ExtensionSettings {
     isPro: boolean;
     defaultBriefingMode: BriefingMode;
     autoSaveMinMessages: number;
+    enabledPlatforms?: Platform[];
 }
+export declare const ALL_PLATFORMS: Platform[];
 export declare const DEFAULT_SETTINGS: ExtensionSettings;
 //# sourceMappingURL=index.d.ts.map

@@ -38,7 +38,21 @@
     <!-- Off state (kept for compatibility but hidden) -->
     <div id="offState" class="off-state hidden"></div>
 
-    <!-- Main panel always visible -->
+    <!-- Platform selection panel (shown on first run or from settings) -->
+    <div id="platformSelectPanel" class="hidden platform-select-panel">
+      <div class="platform-select-header">
+        <div class="platform-select-title">Which AI assistants do you use?</div>
+        <div class="platform-select-sub">Only selected platforms will be synced</div>
+      </div>
+      <div id="platformCheckboxes" class="platform-checkboxes">
+        <!-- Built dynamically by popup.ts -->
+      </div>
+      <div class="platform-select-footer">
+        <button id="platformSyncBtn" class="platform-sync-btn">Sync selected →</button>
+      </div>
+    </div>
+
+    <!-- Main panel -->
     <div id="mainPanel">
 
       <!-- Search -->
@@ -64,20 +78,22 @@
 
       <!-- Selection bar (shown when items are checked) -->
       <div id="selectionBar" class="selection-bar hidden">
-        <div class="sel-count-wrap">
-          <span class="sel-dot"></span>
-          <span id="selectionCount">0 selected</span>
+        <div class="sel-top-row">
+          <div class="sel-count-wrap">
+            <span class="sel-dot"></span>
+            <span id="selectionCount">0 selected</span>
+          </div>
+          <button id="clearSelection" class="sel-btn-clear" title="Clear selection">✕</button>
         </div>
-        <div class="sel-actions">
-          <button id="clearSelection"  class="sel-btn">Clear</button>
-          <button id="transferBtn"     class="sel-btn">Transfer →</button>
-          <button id="useSelected"     class="sel-btn primary">Use selected →</button>
+        <div class="sel-intent-row">
+          <input type="text" id="intentInput" class="intent-input" placeholder="What do you need? (optional)" />
+          <button id="useSelected" class="sel-btn-inject">Inject →</button>
         </div>
       </div>
 
       <!-- Select hint (shown when no items selected) -->
       <div id="selectHint" class="select-hint hidden">
-        ☑ Check conversations to select, then use them together
+        ☑ Check conversations to select, then inject as context
       </div>
 
       <!-- List -->
@@ -113,6 +129,16 @@
             <input type="checkbox" id="pickerToggle" />
             <span class="toggle-slider"></span>
           </label>
+        </div>
+
+        <div class="setting-divider"></div>
+
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Platform sources</div>
+            <div class="setting-sub">Choose which AI assistants to sync</div>
+          </div>
+          <button id="editPlatformsBtn" class="edit-platforms-btn">Edit →</button>
         </div>
 
         <div class="setting-divider"></div>
@@ -163,41 +189,13 @@
             <button class="confirm-mode-btn" data-mode="full">Raw (large)</button>
           </div>
         </div>
-        <div id="confirmIntentRow" class="confirm-intent-row hidden">
-          <label class="confirm-intent-label">What are you working on next? <span class="confirm-intent-opt">(optional · smart retrieval)</span></label>
-          <input type="text" id="confirmIntentInput" class="confirm-intent-input" placeholder="e.g. implement the auth system we discussed" />
-        </div>
         <div class="confirm-actions">
           <button id="confirmCancel" class="confirm-btn-cancel">Cancel</button>
           <button id="confirmInject" class="confirm-btn-inject">Inject context →</button>
         </div>
       </div>
     </div>
-    <!-- Transfer modal -->
-    <div id="transferModal" class="confirm-modal hidden">
-      <div class="confirm-card transfer-card">
-        <div class="confirm-header">
-          <div class="confirm-icon">⇄</div>
-          <div>
-            <div class="confirm-title">Smart context inject</div>
-            <div class="confirm-sub">Retrieves only what's relevant and injects it here.</div>
-          </div>
-        </div>
-        <div class="transfer-field">
-          <label class="transfer-label" for="transferIntent">What do you want to do next?</label>
-          <input
-            type="text"
-            id="transferIntent"
-            class="transfer-input"
-            placeholder="e.g. build the auth system we discussed"
-          />
-        </div>
-        <div class="confirm-actions">
-          <button id="transferCancel" class="confirm-btn-cancel">Cancel</button>
-          <button id="transferConfirm" class="confirm-btn-inject">Inject context →</button>
-        </div>
-      </div>
-    </div>
+
   </div>
 
   <script src="popup.js"></script>

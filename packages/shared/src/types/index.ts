@@ -7,6 +7,10 @@ export type Platform =
   | "Grok"
   | "DeepSeek"
   | "Perplexity"
+  | "Copilot"
+  | "Mistral"
+  | "MetaAI"
+  | "Poe"
   | "Unknown";
 
 export type BriefingMode = "full" | "summary" | "keypoints";
@@ -230,7 +234,13 @@ export interface ExtensionSettings {
   isPro: boolean;
   defaultBriefingMode: BriefingMode;
   autoSaveMinMessages: number;
+  enabledPlatforms?: Platform[];
 }
+
+export const ALL_PLATFORMS: Platform[] = [
+  "Claude", "ChatGPT", "Gemini", "Grok", "DeepSeek",
+  "Perplexity", "Copilot", "Mistral", "MetaAI", "Poe",
+];
 
 export const DEFAULT_SETTINGS: ExtensionSettings = {
   pickerEnabled: true,
@@ -238,4 +248,5 @@ export const DEFAULT_SETTINGS: ExtensionSettings = {
   isPro: false,
   defaultBriefingMode: "summary",
   autoSaveMinMessages: 4,
+  enabledPlatforms: [...ALL_PLATFORMS],
 };
