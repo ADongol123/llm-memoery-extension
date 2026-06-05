@@ -722,8 +722,10 @@ body {
 .sidebar-item.selected { opacity: 1; }
 
 /* Discovered item checkbox shows ↗ instead of a number */
-.check-box--disc::before { content: "↗" !important; font-size: 11px; }
-.check-input:checked + .check-box--disc::before { content: "✓" !important; }
+.check-box--disc { font-size: 11px; }
+.check-box--disc::before { content: "↗"; }
+.check-input:checked + .check-box--disc { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: 0 0 0 3px rgba(99,102,241,0.3); }
+.check-input:checked + .check-box--disc::before { content: "✓"; }
 .discovered-badge {
   font-size: 9px;
   font-weight: 700;

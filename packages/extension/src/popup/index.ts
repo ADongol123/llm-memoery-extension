@@ -460,13 +460,8 @@ function makeSidebarItem(item: { title: string; url: string; platform: string })
 
   el.addEventListener("click", (e) => {
     if ((e.target as HTMLElement).closest(".item-check, .open-btn")) return;
-    // Row click toggles selection (consistent with saved items)
-    if (selectedItems.size > 0 || selectedDiscovered.size > 0) {
-      toggleSelectDiscovered(item, el);
-    } else {
-      chrome.tabs.create({ url: item.url });
-      showToast("Opening — will auto-save in ~30s");
-    }
+    // Discovered items always toggle selection on row click — "Open →" is the explicit open action
+    toggleSelectDiscovered(item, el);
   });
 
   return el;
