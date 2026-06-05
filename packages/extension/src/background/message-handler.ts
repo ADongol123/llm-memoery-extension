@@ -476,22 +476,15 @@ async function scrapePlatform(
     const seedUrl = SEED_URLS[platform];
     if (!seedUrl) return { platform, count: 0 };
 
-    let winId: number | undefined;
+    let createdTabId: number | undefined;
     try {
-      // Off-screen popup window — positioned outside visible screen area so the
-      // user never sees it. Content scripts still run normally inside it.
-      const win = await chrome.windows.create({
-        url:     seedUrl,
-        type:    "popup",
-        focused: false,
-        left:    -5000,
-        top:     -5000,
-        width:   800,
-        height:  600,
-      });
-      winId = win.id;
-      const tabId = win.tabs?.[0]?.id;
-      if (!tabId) return { platform, count: 0 };
+      // Background tab — active:false keeps it in the current window without
+      // stealing focus. Content scripts inject and the SPA renders normally.
+      const tab = await chrome.tabs.create({ url: seedUrl, active: false });
+      createdTabId = tab.id;
+      if (!createdTabId) return { platform, count: 0 };
+
+      const tabId = createdTabId;
 
       // Wait for page to fully load
       await new Promise<void>((res) => {
@@ -510,7 +503,7 @@ async function scrapePlatform(
 
       conversations = await scrapeTabWithTimeout(tabId);
     } catch { /* skip */ } finally {
-      if (winId !== undefined) chrome.windows.remove(winId).catch(() => {});
+      if (createdTabId !== undefined) chrome.tabs.remove(createdTabId).catch(() => {});
     }
   }
 

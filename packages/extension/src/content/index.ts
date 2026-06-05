@@ -26,19 +26,17 @@ if (!adapter) {
 let registry: SelectorRegistry = {};
 
 async function init(): Promise<void> {
-  // Get cached selector registry from background
+  // Load selector registry first, then start autosave with the correct registry.
   chrome.runtime.sendMessage({ type: "GET_SELECTOR_REGISTRY" }, (res) => {
     if (res?.success && res.data) {
       registry = res.data as SelectorRegistry;
     }
-  });
-
-  // Start auto-save
-  chrome.storage.local.get("llm_settings", (result) => {
-    const settings = result.llm_settings ?? {};
-    if (settings.autoSaveEnabled !== false) {
-      startAutosave(adapter!, registry);
-    }
+    chrome.storage.local.get("llm_settings", (result) => {
+      const settings = result.llm_settings ?? {};
+      if (settings.autoSaveEnabled !== false) {
+        startAutosave(adapter!, registry);
+      }
+    });
   });
 
   // Snippet saver (text selection → save button)
