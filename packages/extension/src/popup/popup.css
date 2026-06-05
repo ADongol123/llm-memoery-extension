@@ -737,6 +737,11 @@ body {
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
+.discovered-badge.open-now {
+  color: #20b2aa;
+  background: rgba(32,178,170,0.12);
+  border: 1px solid rgba(32,178,170,0.3);
+}
 .open-btn {
   background: var(--surface2);
   border: 1px solid var(--border2);

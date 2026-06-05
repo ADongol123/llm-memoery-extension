@@ -27,6 +27,9 @@ let isGeneratingPkg      = false;
 let isSyncing            = false;
 let sidebarCache:        Record<string, Array<{ title: string; url: string }>> = {};
 let selectedDiscovered:  Map<string, { title: string; url: string; platform: string }> = new Map();
+// Maps a conversation URL → tabId for tabs currently open in the browser.
+// Used to silently extract content from already-open tabs at inject time.
+let openTabUrlMap: Map<string, number> = new Map();
 
 // ── DOM refs ───────────────────────────────────────────────────────────────────
 
@@ -49,6 +52,7 @@ const tabBar            = $("tabBar");
 const modeConvBtn       = $("modeConvBtn");
 const modePkgBtn        = $("modePkgBtn");
 const generatePkgBtn    = $("generatePkgBtn");
+const mainPlatformsBtn  = $("mainPlatformsBtn");
 const syncBtn           = $("syncBtn");
 const selectionBar      = $("selectionBar");
 const selectionCount    = $("selectionCount");
@@ -98,6 +102,32 @@ function send<T = unknown>(message: unknown): Promise<T> {
   });
 }
 
+// ── Open-tab tracking ──────────────────────────────────────────────────────────
+
+async function refreshOpenTabMap(): Promise<void> {
+  const tabs = await new Promise<chrome.tabs.Tab[]>((r) => chrome.tabs.query({}, r));
+  openTabUrlMap = new Map(
+    tabs
+      .filter((t) => t.url && t.id !== undefined)
+      .map((t) => [t.url!, t.id!])
+  );
+}
+
+// Silently extract conversation messages from an already-open tab without
+// focusing it or changing the user's active tab in any way.
+function extractFromTab(tabId: number): Promise<import("../types.js").Message[]> {
+  return new Promise((resolve) => {
+    chrome.tabs.sendMessage(
+      tabId,
+      { type: "GET_CONVERSATION" },
+      (res: { success?: boolean; messages?: import("../types.js").Message[] } | undefined) => {
+        if (chrome.runtime.lastError || !res?.success) resolve([]);
+        else resolve(res.messages ?? []);
+      }
+    );
+  });
+}
+
 // ── Data loading ───────────────────────────────────────────────────────────────
 
 async function loadAll(): Promise<void> {
@@ -116,6 +146,8 @@ async function loadAll(): Promise<void> {
   if (cacheRes.success) sidebarCache = cacheRes.data ?? {};
 
   briefingMode = settings.defaultBriefingMode ?? "full";
+
+  await refreshOpenTabMap();
 }
 
 // ── Platform selection screen ──────────────────────────────────────────────────
@@ -268,7 +300,7 @@ function renderConversations(): void {
   }
 
   if (newDiscovered.length) {
-    appendDivider("Discovered — open to capture");
+    appendDivider("Discovered");
     newDiscovered.forEach((d) => { itemList.appendChild(makeSidebarItem(d)); });
   }
 }
@@ -428,12 +460,13 @@ function makeConvItem(conv: Conversation, num: number): HTMLElement {
 function makeSidebarItem(item: { title: string; url: string; platform: string }): HTMLElement {
   const key        = item.url;
   const isSelected = selectedDiscovered.has(key);
+  const isOpen     = openTabUrlMap.has(item.url);
 
   const el = document.createElement("div");
   el.className = ["item", "sidebar-item", isSelected ? "selected" : ""].filter(Boolean).join(" ");
 
   el.innerHTML = `
-    <label class="item-check" title="Select to open when injecting">
+    <label class="item-check" title="${isOpen ? "Select to inject silently" : "Open this tab first to capture it"}">
       <input type="checkbox" class="check-input" ${isSelected ? "checked" : ""}/>
       <span class="check-box check-box--disc">↗</span>
     </label>
@@ -441,7 +474,9 @@ function makeSidebarItem(item: { title: string; url: string; platform: string })
       <div class="item-title" title="${escHtml(item.title)}">${escHtml(item.title)}</div>
       <div class="item-meta">
         <span class="platform-badge">${escHtml(item.platform)}</span>
-        <span class="discovered-badge">not captured</span>
+        ${isOpen
+          ? `<span class="discovered-badge open-now" title="Tab is open — content will be extracted silently">open</span>`
+          : `<span class="discovered-badge" title="Visit this URL first to capture it">not captured</span>`}
       </div>
     </div>
     <button class="open-btn" title="Open in new tab">Open →</button>
@@ -562,7 +597,7 @@ function updateSelectionBar(): void {
   if (count > 0) {
     const parts: string[] = [];
     if (selectedItems.size > 0) parts.push(`${selectedItems.size} saved`);
-    if (selectedDiscovered.size > 0) parts.push(`${selectedDiscovered.size} to open`);
+    if (selectedDiscovered.size > 0) parts.push(`${selectedDiscovered.size} discovered`);
     selectionCount.textContent = parts.join(" · ");
   }
 }
@@ -597,21 +632,56 @@ function quickInject(conv: Conversation, el: HTMLElement): void {
 
 // Multi-select inject via selection bar "Inject →" button
 async function injectSelected(): Promise<void> {
-  const convs      = [...selectedItems.values()];
+  let convs        = [...selectedItems.values()];
   const discovered = [...selectedDiscovered.values()];
 
   if (!convs.length && !discovered.length) return;
 
-  // Open discovered-only tabs so autosave can capture them
   if (discovered.length > 0) {
-    discovered.forEach((d) => chrome.tabs.create({ url: d.url, active: false }));
-    const openMsg = `Opened ${discovered.length} conversation${discovered.length > 1 ? "s" : ""} to capture`;
-    if (!convs.length) {
-      showToast(`${openMsg} — come back in 30s to inject`);
-      clearAllSelections();
-      return;
+    // Refresh tab map at inject time so it's accurate even if tabs changed
+    await refreshOpenTabMap();
+
+    const notOpen: typeof discovered = [];
+
+    for (const d of discovered) {
+      const tabId = openTabUrlMap.get(d.url);
+      if (!tabId) {
+        notOpen.push(d);
+        continue;
+      }
+      const messages = await extractFromTab(tabId);
+      if (messages.length > 0) {
+        convs = [...convs, {
+          id:            `discovered-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          platform:      d.platform as Platform,
+          sourceUrl:     d.url,
+          title:         d.title,
+          rawMessages:   messages,
+          messageCount:  messages.length,
+          summary:       null,
+          keyPoints:     null,
+          openQuestions: null,
+          topics:        null,
+          entities:      null,
+          processedAt:   null,
+          isAutoSave:    false,
+          isSnippet:     false,
+          pinned:        false,
+          createdAt:     Date.now(),
+          updatedAt:     Date.now(),
+        }];
+      } else {
+        notOpen.push(d); // tab open but content script returned nothing
+      }
     }
-    showToast(`${openMsg} · injecting from ${convs.length} saved now`);
+
+    if (notOpen.length > 0) {
+      const msg = notOpen.length === discovered.length && !convs.length
+        ? `Not captured yet — use "Open →" to visit first`
+        : `${notOpen.length} skipped (not captured) — use "Open →" first`;
+      showToast(msg);
+      if (!convs.length) { clearAllSelections(); return; }
+    }
   }
 
   if (!convs.length) return;
@@ -877,6 +947,7 @@ modePkgBtn.addEventListener("click", () => {
 });
 
 generatePkgBtn.addEventListener("click", generatePackage);
+mainPlatformsBtn.addEventListener("click", () => showPlatformSelect(true));
 syncBtn.addEventListener("click", syncAll);
 clearSelection.addEventListener("click", clearAllSelections);
 useSelected.addEventListener("click", injectSelected);
@@ -932,7 +1003,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
 
   if ("llm_sidebar_cache" in changes) {
     sidebarCache = (changes.llm_sidebar_cache.newValue as typeof sidebarCache) ?? {};
-    render();
+    refreshOpenTabMap().then(() => render());
   }
 
   if ("llm_sync_status" in changes) {

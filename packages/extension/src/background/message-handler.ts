@@ -476,14 +476,27 @@ async function scrapePlatform(
     const seedUrl = SEED_URLS[platform];
     if (!seedUrl) return { platform, count: 0 };
 
-    let tab: chrome.tabs.Tab | null = null;
+    let winId: number | undefined;
     try {
-      tab = await chrome.tabs.create({ url: seedUrl, active: false });
+      // Off-screen popup window — positioned outside visible screen area so the
+      // user never sees it. Content scripts still run normally inside it.
+      const win = await chrome.windows.create({
+        url:     seedUrl,
+        type:    "popup",
+        focused: false,
+        left:    -5000,
+        top:     -5000,
+        width:   800,
+        height:  600,
+      });
+      winId = win.id;
+      const tabId = win.tabs?.[0]?.id;
+      if (!tabId) return { platform, count: 0 };
 
-      // Wait for page to fully load (Chrome API callback keeps SW alive)
+      // Wait for page to fully load
       await new Promise<void>((res) => {
         const onUpdated = (id: number, info: chrome.tabs.TabChangeInfo) => {
-          if (id === tab!.id && info.status === "complete") {
+          if (id === tabId && info.status === "complete") {
             chrome.tabs.onUpdated.removeListener(onUpdated);
             res();
           }
@@ -495,9 +508,9 @@ async function scrapePlatform(
       // Extra wait for SPA sidebar to render
       await new Promise((r) => setTimeout(r, 2500));
 
-      if (tab.id) conversations = await scrapeTabWithTimeout(tab.id);
+      conversations = await scrapeTabWithTimeout(tabId);
     } catch { /* skip */ } finally {
-      if (tab?.id) chrome.tabs.remove(tab.id).catch(() => {});
+      if (winId !== undefined) chrome.windows.remove(winId).catch(() => {});
     }
   }
 
