@@ -90,6 +90,56 @@ function showContextBadge(text: string): void {
   setTimeout(dismiss, 6000);
 }
 
+// Shows a brief confirmation badge after RAG context was silently injected & sent.
+export function showRagBadge(sourceCount: number): void {
+  document.getElementById(CONTEXT_BADGE_ID)?.remove();
+
+  const badge = document.createElement("div");
+  badge.id = CONTEXT_BADGE_ID;
+  Object.assign(badge.style, {
+    position:      "fixed",
+    bottom:        "80px",
+    left:          "50%",
+    transform:     "translateX(-50%) translateY(8px)",
+    zIndex:        "2147483647",
+    background:    "rgba(16,185,129,0.92)",
+    backdropFilter: "blur(8px)",
+    border:        "1px solid rgba(52,211,153,0.6)",
+    borderRadius:  "20px",
+    padding:       "7px 14px",
+    fontFamily:    '-apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif',
+    fontSize:      "12px",
+    fontWeight:    "600",
+    color:         "#fff",
+    display:       "flex",
+    alignItems:    "center",
+    gap:           "7px",
+    boxShadow:     "0 4px 20px rgba(16,185,129,0.35)",
+    opacity:       "0",
+    transition:    "opacity 0.2s ease, transform 0.2s cubic-bezier(0.34,1.3,0.64,1)",
+    pointerEvents: "none",
+    whiteSpace:    "nowrap",
+  });
+
+  const label = sourceCount > 0
+    ? `RAG context from ${sourceCount} conversation${sourceCount === 1 ? "" : "s"} injected ✦`
+    : "RAG context injected ✦";
+
+  badge.innerHTML = `<span style="font-size:14px;">⬡</span><span>LLM Memory: ${label}</span>`;
+  document.body.appendChild(badge);
+
+  requestAnimationFrame(() => {
+    badge.style.opacity   = "1";
+    badge.style.transform = "translateX(-50%) translateY(0)";
+  });
+
+  setTimeout(() => {
+    badge.style.opacity   = "0";
+    badge.style.transform = "translateX(-50%) translateY(8px)";
+    setTimeout(() => badge.remove(), 250);
+  }, 3500);
+}
+
 export function copyToClipboard(text: string): void {
   navigator.clipboard.writeText(text).catch(() => {
     const el       = document.createElement("textarea");

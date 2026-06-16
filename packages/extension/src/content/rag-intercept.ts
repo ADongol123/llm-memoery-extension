@@ -4,6 +4,7 @@
 
 import type { PlatformAdapter } from "../adapters/base.js";
 import type { SelectorRegistry } from "../types.js";
+import { showRagBadge } from "./inject.js";
 
 // ── Module state ───────────────────────────────────────────────────────────────
 
@@ -212,14 +213,23 @@ function interceptSend(
 
     removeOverlay();
 
+    let ragInjected = false;
     if (contextText) {
       const fullText = `${contextText}\n\n---\n\n${userMessage}`;
-      adapter.injectText(fullText, selectors);
+      ragInjected = adapter.injectText(fullText, selectors);
     }
 
     isRetriggering = true;
     triggerSend(inputEl, adapter);
     setTimeout(() => { isRetriggering = false; }, 200);
+
+    if (ragInjected) {
+      // Show green confirmation badge so user knows RAG ran
+      showRagBadge(1);
+      console.log("[LLM Memory] RAG context injected for message:", userMessage.slice(0, 60));
+    } else {
+      console.log("[LLM Memory] RAG fetch returned no context — sent without augmentation");
+    }
   };
 
   inputEl.addEventListener("keydown", sendHandler, true);
