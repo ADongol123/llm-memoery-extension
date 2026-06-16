@@ -204,6 +204,16 @@ export type ExtensionMessage = {
 } | {
     type: "TRANSFER_CONTEXT_RESULT";
     payload: KnowledgeBrief | null;
+} | {
+    type: "SET_ACTIVE_RAG_POOL";
+    conversationIds: string[];
+} | {
+    type: "GET_ACTIVE_RAG_POOL";
+} | {
+    type: "CLEAR_ACTIVE_RAG_POOL";
+} | {
+    type: "RETRIEVE_RAG_CONTEXT";
+    userMessage: string;
 };
 export interface ExtensionSettings {
     pickerEnabled: boolean;

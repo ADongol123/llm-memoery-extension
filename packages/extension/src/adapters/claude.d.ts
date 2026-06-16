@@ -8,5 +8,6 @@ export declare class ClaudeAdapter implements PlatformAdapter {
     findInputElement(selectors?: PlatformSelectors): HTMLElement | null;
     injectText(text: string, selectors?: PlatformSelectors): boolean;
     isNewConversation(): boolean;
+    findSendButton(): HTMLElement | null;
 }
 //# sourceMappingURL=claude.d.ts.map

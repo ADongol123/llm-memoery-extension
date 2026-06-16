@@ -11,6 +11,7 @@ export interface PlatformAdapter {
   findInputElement(selectors?: PlatformSelectors): HTMLElement | null;
   injectText(text: string, selectors?: PlatformSelectors): boolean;
   isNewConversation(): boolean;
+  findSendButton?(): HTMLElement | null;
 }
 
 // Shared injection logic — works for contenteditable and textarea

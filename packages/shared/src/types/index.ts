@@ -226,7 +226,11 @@ export type ExtensionMessage =
   | { type: "GET_SELECTOR_REGISTRY" }
   | { type: "BUMP_ANALYTIC"; key: "saves" | "injects" | "packages_generated" }
   | { type: "TRANSFER_CONTEXT"; payload: TransferSession }
-  | { type: "TRANSFER_CONTEXT_RESULT"; payload: KnowledgeBrief | null };
+  | { type: "TRANSFER_CONTEXT_RESULT"; payload: KnowledgeBrief | null }
+  | { type: "SET_ACTIVE_RAG_POOL"; conversationIds: string[] }
+  | { type: "GET_ACTIVE_RAG_POOL" }
+  | { type: "CLEAR_ACTIVE_RAG_POOL" }
+  | { type: "RETRIEVE_RAG_CONTEXT"; userMessage: string };
 
 export interface ExtensionSettings {
   pickerEnabled: boolean;

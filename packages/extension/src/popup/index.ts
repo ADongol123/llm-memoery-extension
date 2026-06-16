@@ -25,6 +25,7 @@ let briefingMode:   BriefingMode = "full";
 let selectedItems:  Map<string, Conversation> = new Map();
 let isGeneratingPkg      = false;
 let isSyncing            = false;
+let activeRagPool: { conversationIds: string[]; activatedAt: number } | null = null;
 let sidebarCache:        Record<string, Array<{ title: string; url: string }>> = {};
 let selectedDiscovered:  Map<string, { title: string; url: string; platform: string }> = new Map();
 // Maps a conversation URL → tabId for tabs currently open in the browser.
@@ -58,7 +59,11 @@ const selectionBar      = $("selectionBar");
 const selectionCount    = $("selectionCount");
 const clearSelection    = $("clearSelection");
 const intentInput       = $<HTMLInputElement>("intentInput");
+const activateContextBtn = $("activateContextBtn");
 const useSelected       = $("useSelected");
+const ragPoolStatus     = $("ragPoolStatus");
+const ragPoolLabel      = $("ragPoolLabel");
+const clearRagPool      = $("clearRagPool");
 const itemList          = $("itemList");
 const toast             = $("toast");
 const confirmModal      = $("confirmModal");
@@ -131,12 +136,13 @@ function extractFromTab(tabId: number): Promise<import("../types.js").Message[]>
 // ── Data loading ───────────────────────────────────────────────────────────────
 
 async function loadAll(): Promise<void> {
-  const [convRes, pkgRes, settRes, authRes, cacheRes] = await Promise.all([
+  const [convRes, pkgRes, settRes, authRes, cacheRes, poolRes] = await Promise.all([
     send<{ success: boolean; data: Conversation[] }>({ type: "GET_CONVERSATIONS" }),
     send<{ success: boolean; data: ContextPackage[] }>({ type: "GET_PACKAGES" }),
     send<{ success: boolean; data: ExtensionSettings }>({ type: "GET_SETTINGS" }),
     send<{ success: boolean; data: AuthSession | null }>({ type: "GET_AUTH" }),
     send<{ success: boolean; data: Record<string, Array<{ title: string; url: string }>> }>({ type: "GET_SIDEBAR_CACHE" }),
+    send<{ success: boolean; data: { conversationIds: string[]; activatedAt: number } | null }>({ type: "GET_ACTIVE_RAG_POOL" }),
   ]);
 
   if (convRes.success) conversations = convRes.data ?? [];
@@ -144,6 +150,7 @@ async function loadAll(): Promise<void> {
   if (settRes.success) settings      = settRes.data ?? DEFAULT_SETTINGS;
   if (authRes.success) session       = authRes.data;
   if (cacheRes.success) sidebarCache = cacheRes.data ?? {};
+  if (poolRes.success) activeRagPool = poolRes.data;
 
   briefingMode = settings.defaultBriefingMode ?? "full";
 
@@ -594,6 +601,26 @@ function updateSelectionBar(): void {
   const count = selectedItems.size + selectedDiscovered.size;
   selectionBar.classList.toggle("hidden", count === 0);
   generatePkgBtn.classList.toggle("hidden", selectedItems.size === 0 || viewMode !== "conversations");
+
+  // "Activate" shown only when: saved convs selected (no discovered), all RAG-ready, signed in
+  const savedConvs  = [...selectedItems.values()];
+  const allRagReady = savedConvs.length > 0 && savedConvs.every((c) => c.processedAt !== null);
+  const noDiscovered = selectedDiscovered.size === 0;
+  const canActivate = allRagReady && noDiscovered && session !== null;
+
+  activateContextBtn.classList.toggle("hidden", !canActivate);
+  if (canActivate) {
+    (activateContextBtn as HTMLButtonElement).disabled = false;
+    activateContextBtn.title = "Save these conversations as background RAG context";
+  }
+
+  // Pool status indicator
+  ragPoolStatus.classList.toggle("hidden", !activeRagPool);
+  if (activeRagPool) {
+    const n = activeRagPool.conversationIds.length;
+    ragPoolLabel.textContent = `${n} conversation${n === 1 ? "" : "s"} active as RAG context`;
+  }
+
   if (count > 0) {
     const parts: string[] = [];
     if (selectedItems.size > 0) parts.push(`${selectedItems.size} saved`);
@@ -952,6 +979,24 @@ syncBtn.addEventListener("click", syncAll);
 clearSelection.addEventListener("click", clearAllSelections);
 useSelected.addEventListener("click", injectSelected);
 
+activateContextBtn.addEventListener("click", async () => {
+  const ids = [...selectedItems.keys()];
+  if (!ids.length) return;
+  await send({ type: "SET_ACTIVE_RAG_POOL", conversationIds: ids });
+  activeRagPool = { conversationIds: ids, activatedAt: Date.now() };
+  clearAllSelections();
+  updateSelectionBar();
+  showToast(`${ids.length} conversation${ids.length === 1 ? "" : "s"} activated as RAG context ✓`);
+  setTimeout(() => window.close(), 1200);
+});
+
+clearRagPool.addEventListener("click", async () => {
+  await send({ type: "CLEAR_ACTIVE_RAG_POOL" });
+  activeRagPool = null;
+  updateSelectionBar();
+  showToast("RAG context pool cleared");
+});
+
 // Settings events
 autoSaveToggle.addEventListener("change", saveSettingsNow);
 pickerToggle.addEventListener("change",   saveSettingsNow);
@@ -1004,6 +1049,11 @@ chrome.storage.onChanged.addListener((changes, area) => {
   if ("llm_sidebar_cache" in changes) {
     sidebarCache = (changes.llm_sidebar_cache.newValue as typeof sidebarCache) ?? {};
     refreshOpenTabMap().then(() => render());
+  }
+
+  if ("llm_active_rag_pool" in changes) {
+    activeRagPool = (changes.llm_active_rag_pool.newValue as typeof activeRagPool) ?? null;
+    updateSelectionBar();
   }
 
   if ("llm_sync_status" in changes) {

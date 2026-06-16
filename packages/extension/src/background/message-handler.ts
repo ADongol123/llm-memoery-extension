@@ -215,6 +215,47 @@ async function dispatch(message: ExtensionMessage, respond: SendResponse): Promi
         break;
       }
 
+      // ── Active RAG Pool ───────────────────────────────────────────────────────
+
+      case "SET_ACTIVE_RAG_POOL": {
+        const pool = { conversationIds: message.conversationIds, activatedAt: Date.now() };
+        await new Promise<void>((r) => chrome.storage.local.set({ llm_active_rag_pool: pool }, r));
+        respond({ success: true });
+        break;
+      }
+
+      case "GET_ACTIVE_RAG_POOL": {
+        const stored = await new Promise<Record<string, unknown>>((r) =>
+          chrome.storage.local.get("llm_active_rag_pool", r)
+        );
+        respond({ success: true, data: stored.llm_active_rag_pool ?? null });
+        break;
+      }
+
+      case "CLEAR_ACTIVE_RAG_POOL": {
+        await new Promise<void>((r) => chrome.storage.local.remove("llm_active_rag_pool", r));
+        respond({ success: true });
+        break;
+      }
+
+      case "RETRIEVE_RAG_CONTEXT": {
+        const poolStored = await new Promise<Record<string, unknown>>((r) =>
+          chrome.storage.local.get("llm_active_rag_pool", r)
+        );
+        const ragPool = poolStored.llm_active_rag_pool as
+          { conversationIds: string[]; activatedAt: number } | null;
+        if (!ragPool?.conversationIds?.length) {
+          respond({ success: false, text: null });
+          break;
+        }
+        const ragResult = await transferContext({
+          selectedConversationIds: ragPool.conversationIds,
+          intent: message.userMessage,
+        });
+        respond(ragResult);
+        break;
+      }
+
       // ── Analytics ────────────────────────────────────────────────────────────
 
       case "BUMP_ANALYTIC": {

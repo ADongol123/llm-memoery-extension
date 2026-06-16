@@ -60,4 +60,12 @@ export class ChatGPTAdapter implements PlatformAdapter {
   isNewConversation(): boolean {
     return this.extractConversation().length === 0;
   }
+
+  findSendButton(): HTMLElement | null {
+    return (
+      document.querySelector<HTMLElement>('[data-testid="send-button"]') ??
+      document.querySelector<HTMLElement>('button[aria-label*="Send"]') ??
+      null
+    );
+  }
 }

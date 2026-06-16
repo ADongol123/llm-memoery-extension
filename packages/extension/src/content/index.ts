@@ -13,6 +13,7 @@ import { startAutosave, stopAutosave } from "./autosave.js";
 import { initSnippetSaver }       from "./snippet.js";
 import { mountBanner, resetBannerState } from "./banner.js";
 import { injectText, copyToClipboard }   from "./inject.js";
+import { initRagIntercept, resetRagIntercept } from "./rag-intercept.js";
 import type { SelectorRegistry, Conversation } from "../types.js";
 
 // ── Bootstrap ──────────────────────────────────────────────────────────────────
@@ -36,6 +37,7 @@ async function init(): Promise<void> {
       if (settings.autoSaveEnabled !== false) {
         startAutosave(adapter!, registry);
       }
+      initRagIntercept(adapter!, registry).catch(console.warn);
     });
   });
 
@@ -98,9 +100,11 @@ function onUrlChange(): void {
   if (location.href === currentUrl) return;
   currentUrl = location.href;
   resetBannerState();
+  resetRagIntercept();
   stopAutosave();
   startAutosave(adapter!, registry);
   maybeShowBanner();
+  initRagIntercept(adapter!, registry).catch(console.warn);
 }
 
 const _push    = history.pushState.bind(history);

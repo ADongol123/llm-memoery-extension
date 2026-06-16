@@ -88,8 +88,16 @@
         </div>
         <div class="sel-intent-row">
           <input type="text" id="intentInput" class="intent-input" placeholder="What do you need? (optional)" />
+          <button id="activateContextBtn" class="sel-btn-activate hidden">⬡ Activate</button>
           <button id="useSelected" class="sel-btn-inject">Inject →</button>
         </div>
+      </div>
+
+      <!-- Active RAG pool status indicator -->
+      <div id="ragPoolStatus" class="rag-pool-status hidden">
+        <span class="rag-pool-dot"></span>
+        <span id="ragPoolLabel"></span>
+        <button id="clearRagPool" class="rag-pool-clear" title="Deactivate context pool">×</button>
       </div>
 
       <!-- Select hint (shown when no items selected) -->

@@ -7,6 +7,7 @@ export interface PlatformAdapter {
     findInputElement(selectors?: PlatformSelectors): HTMLElement | null;
     injectText(text: string, selectors?: PlatformSelectors): boolean;
     isNewConversation(): boolean;
+    findSendButton?(): HTMLElement | null;
 }
 export declare function injectIntoElement(el: HTMLElement, text: string): boolean;
 export declare function deduplicateSidebar(items: SidebarItem[]): SidebarItem[];
