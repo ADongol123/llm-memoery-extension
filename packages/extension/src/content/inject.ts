@@ -91,7 +91,7 @@ function showContextBadge(text: string): void {
 }
 
 // Shows a brief confirmation badge after RAG context was silently injected & sent.
-export function showRagBadge(sourceCount: number): void {
+export function showRagBadge(): void {
   document.getElementById(CONTEXT_BADGE_ID)?.remove();
 
   const badge = document.createElement("div");
@@ -121,11 +121,7 @@ export function showRagBadge(sourceCount: number): void {
     whiteSpace:    "nowrap",
   });
 
-  const label = sourceCount > 0
-    ? `RAG context from ${sourceCount} conversation${sourceCount === 1 ? "" : "s"} injected ✦`
-    : "RAG context injected ✦";
-
-  badge.innerHTML = `<span style="font-size:14px;">⬡</span><span>LLM Memory: ${label}</span>`;
+  badge.innerHTML = `<span style="font-size:14px;">⬡</span><span>LLM Memory: RAG context injected ✦</span>`;
   document.body.appendChild(badge);
 
   requestAnimationFrame(() => {
