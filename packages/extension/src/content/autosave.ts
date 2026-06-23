@@ -4,10 +4,11 @@
 import type { PlatformAdapter } from "../adapters/base.js";
 import type { Conversation, SelectorRegistry } from "../types.js";
 import { makeTitle } from "../types.js";
+import { updateStatus } from "./status-indicator.js";
 
 const INTERVAL_MS     = 30_000;
-const MIN_MESSAGES    = 4;
-const MIN_GROWTH      = 2;  // must have at least 2 new messages since last save
+const MIN_MESSAGES    = 2;
+const MIN_GROWTH      = 1;  // must have at least 1 new message since last save
 
 let lastSavedUrl      = "";
 let lastSavedCount    = 0;
@@ -118,6 +119,8 @@ function tick(adapter: PlatformAdapter, registry: SelectorRegistry): void {
   const selectors = registry[adapter.platform] ?? undefined;
   const messages  = adapter.extractConversation(selectors);
 
+  console.debug(`[LLM Memory] ${adapter.platform}: extracted ${messages.length} messages`);
+
   if (messages.length < MIN_MESSAGES) return;
 
   const currentUrl = location.href;
@@ -146,8 +149,11 @@ function tick(adapter: PlatformAdapter, registry: SelectorRegistry): void {
     updatedAt:     Date.now(),
   };
 
+  updateStatus("saving");
+
   chrome.runtime.sendMessage({ type: "AUTO_SAVE_CONVERSATION", payload }, (res) => {
     if (chrome.runtime.lastError) {
+      updateStatus("active");
       stopAutosave();
       return;
     }
@@ -155,7 +161,10 @@ function tick(adapter: PlatformAdapter, registry: SelectorRegistry): void {
       const isFirstSave = lastSavedCount === 0;
       lastSavedCount = messages.length;
       lastSavedUrl   = currentUrl;
+      updateStatus("saved");
       if (isFirstSave) showSaveNotification(payload.title);
+    } else {
+      updateStatus("active");
     }
   });
 }

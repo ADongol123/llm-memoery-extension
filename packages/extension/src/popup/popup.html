@@ -10,7 +10,7 @@
   <div id="app">
 
     <!-- Header -->
-    <header class="header">
+    <header id="headerEl" class="header">
       <div class="header-left">
         <svg class="logo-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="22" height="22" aria-hidden="true">
           <path d="M64 6L118 35.5V93.5L64 123L10 93.5V35.5L64 6Z" fill="#6366f1"/>
@@ -37,6 +37,38 @@
 
     <!-- Off state (kept for compatibility but hidden) -->
     <div id="offState" class="off-state hidden"></div>
+
+    <!-- Login panel (shown when not authenticated) -->
+    <div id="loginPanel" class="hidden login-panel">
+      <div class="login-content">
+        <svg class="login-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="48" height="48" aria-hidden="true">
+          <path d="M64 6L118 35.5V93.5L64 123L10 93.5V35.5L64 6Z" fill="#6366f1"/>
+          <circle cx="64" cy="42" r="9" fill="white"/>
+          <circle cx="38" cy="86" r="9" fill="white"/>
+          <circle cx="90" cy="86" r="9" fill="white"/>
+          <line x1="64" y1="42" x2="38" y2="86" stroke="rgba(255,255,255,0.6)" stroke-width="7" stroke-linecap="round"/>
+          <line x1="64" y1="42" x2="90" y2="86" stroke="rgba(255,255,255,0.6)" stroke-width="7" stroke-linecap="round"/>
+          <line x1="38" y1="86" x2="90" y2="86" stroke="rgba(255,255,255,0.6)" stroke-width="7" stroke-linecap="round"/>
+        </svg>
+        <div class="login-title">Welcome to LLM Memory</div>
+        <div class="login-sub">Your conversations, reusable across any AI</div>
+        <div class="login-features">
+          <div class="login-feature">Save conversations from ChatGPT, Claude, Gemini &amp; more</div>
+          <div class="login-feature">Inject past context into any new AI conversation</div>
+          <div class="login-feature">Sync across devices with your Google account</div>
+        </div>
+        <button id="loginGoogleBtn" class="google-sign-in-btn login-google-btn">
+          <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+            <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 01-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
+            <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/>
+            <path d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+            <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+          </svg>
+          Sign in with Google
+        </button>
+        <div id="loginError" class="login-error hidden"></div>
+      </div>
+    </div>
 
     <!-- Platform selection panel (shown on first run or from settings) -->
     <div id="platformSelectPanel" class="hidden platform-select-panel">
@@ -156,10 +188,15 @@
           <div class="setting-label">Account</div>
           <div id="authSignedOut">
             <div class="setting-sub">Sign in to sync across devices and enable AI-powered Context Packages.</div>
-            <div class="email-row">
-              <input type="email" id="emailInput" class="email-input" placeholder="your@email.com" />
-              <button id="signInBtn" class="sign-in-btn">Send link</button>
-            </div>
+            <button id="googleSignInBtn" class="google-sign-in-btn">
+              <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+                <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 01-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
+                <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/>
+                <path d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+                <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+              </svg>
+              Sign in with Google
+            </button>
             <div id="signInMsg" class="sign-in-msg hidden"></div>
           </div>
           <div id="authSignedIn" class="hidden">

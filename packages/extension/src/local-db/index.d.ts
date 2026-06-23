@@ -1,4 +1,15 @@
 import type { Conversation, ContextPackage, ExtensionSettings, SelectorRegistry } from "../types.js";
+export interface LocalChunk {
+    id: string;
+    conversationId: string;
+    contentType: "text" | "code";
+    rawContent: string;
+    processedContent: string;
+    chunkIndex: number;
+    embedding: number[];
+    metadata: Record<string, unknown>;
+    createdAt: number;
+}
 export declare function saveConversation(conv: Conversation): Promise<void>;
 export declare function upsertConversationByUrl(conv: Conversation): Promise<void>;
 export declare function getConversationByUrl(url: string): Promise<Conversation | null>;
@@ -23,4 +34,7 @@ export declare function getPendingSyncOps(): Promise<{
 }[]>;
 export declare function deleteSyncOp(id: string): Promise<void>;
 export declare function clearSyncQueue(): Promise<void>;
+export declare function saveChunks(chunks: LocalChunk[]): Promise<void>;
+export declare function getChunksByConversation(conversationId: string): Promise<LocalChunk[]>;
+export declare function deleteChunksByConversation(conversationId: string): Promise<void>;
 //# sourceMappingURL=index.d.ts.map

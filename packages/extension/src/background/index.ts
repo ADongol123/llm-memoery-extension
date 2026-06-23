@@ -1,12 +1,11 @@
 // Background service worker — the central hub.
-// Manages: storage, cloud sync, AI package generation, keyboard shortcuts,
-//          selector registry refresh, periodic alarms.
 
 import { handleMessage }           from "./message-handler.js";
 import { syncNow }                  from "./sync.js";
 import { refreshSelectorRegistry }  from "./selector-refresh.js";
 import { getSettings, saveConversation } from "../local-db/index.js";
 import { makeTitle }                from "../types.js";
+import { updateBadge }              from "./badge.js";
 
 // ── Startup ────────────────────────────────────────────────────────────────────
 
@@ -14,12 +13,14 @@ chrome.runtime.onInstalled.addListener(async () => {
   console.log("[LLM Memory] Installed — initialising");
   await refreshSelectorRegistry();
   setupAlarms();
+  updateBadge();
 });
 
 chrome.runtime.onStartup.addListener(async () => {
   await refreshSelectorRegistry();
   await syncNow().catch(() => {});
   setupAlarms();
+  updateBadge();
 });
 
 // ── Alarms ─────────────────────────────────────────────────────────────────────
@@ -30,7 +31,10 @@ function setupAlarms(): void {
 }
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
-  if (alarm.name === "sync")             await syncNow().catch(() => {});
+  if (alarm.name === "sync") {
+    await syncNow().catch(() => {});
+    updateBadge();
+  }
   if (alarm.name === "selector-refresh") await refreshSelectorRegistry().catch(() => {});
 });
 
@@ -51,7 +55,6 @@ chrome.commands.onCommand.addListener(async (command) => {
       async (res: { success: boolean; messages: unknown[]; platform: string } | undefined) => {
         if (chrome.runtime.lastError || !res?.success || !res.messages?.length) return;
 
-        const settings = await getSettings();
         const rawMsgs = res.messages as Array<{ role: string; content: string }>;
         const msgs    = rawMsgs.map((m) => ({
           role:    m.role as "user" | "assistant",

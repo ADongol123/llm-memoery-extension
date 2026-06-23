@@ -203,6 +203,7 @@ export type TransferSession = {
 export type ExtensionMessage =
   | { type: "GET_SIDEBAR_CONVERSATIONS" }
   | { type: "GET_CONVERSATION" }
+  | { type: "GET_CONVERSATION_FULL" }
   | { type: "GET_PLATFORM" }
   | { type: "INJECT_TEXT"; text: string }
   | { type: "SAVE_CONVERSATION"; payload: Conversation }
@@ -218,6 +219,7 @@ export type ExtensionMessage =
   | { type: "SAVE_SETTINGS"; settings: ExtensionSettings }
   | { type: "GET_AUTH" }
   | { type: "SIGN_IN"; email: string }
+  | { type: "SIGN_IN_GOOGLE" }
   | { type: "SIGN_OUT" }
   | { type: "AUTH_CALLBACK"; accessToken: string; refreshToken: string }
   | { type: "SYNC_NOW" }
@@ -230,7 +232,10 @@ export type ExtensionMessage =
   | { type: "SET_ACTIVE_RAG_POOL"; conversationIds: string[] }
   | { type: "GET_ACTIVE_RAG_POOL" }
   | { type: "CLEAR_ACTIVE_RAG_POOL" }
-  | { type: "RETRIEVE_RAG_CONTEXT"; userMessage: string };
+  | { type: "RETRIEVE_RAG_CONTEXT"; userMessage: string }
+  | { type: "GET_PENDING_SYNC_IDS" }
+  | { type: "CLEAR_BADGE_COUNT" }
+  | { type: "REFRESH_AUTH" };
 
 export interface ExtensionSettings {
   pickerEnabled: boolean;

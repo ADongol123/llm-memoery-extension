@@ -1,19 +1,67 @@
-export const dynamic = "force-dynamic";
+"use client";
 
-import { createServerSupabaseClient } from "../../lib/supabase-server";
-import { redirect } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { collection, query, where, orderBy, limit, getDocs } from "firebase/firestore";
+import { db } from "../../lib/firebase";
+import { useAuth } from "../../lib/useAuth";
 
-export default async function PackagesPage() {
-  const supabase = await createServerSupabaseClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/auth");
+interface ContextPackage {
+  id: string;
+  name: string;
+  description: string;
+  document: string;
+  document_json: {
+    summary?: string;
+    decisionsMade?: string[];
+    openQuestions?: string[];
+    suggestedNextSteps?: string[];
+  } | null;
+  is_public: boolean;
+  created_at: string;
+}
 
-  const { data: packages } = await supabase
-    .from("context_packages")
-    .select("id, name, description, document, document_json, is_public, created_at")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false })
-    .limit(50);
+export default function PackagesPage() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+  const [packages, setPackages] = useState<ContextPackage[]>([]);
+  const [fetching, setFetching] = useState(true);
+
+  useEffect(() => {
+    if (loading) return;
+    if (!user) { router.replace("/auth"); return; }
+
+    const ref = collection(db, "packages");
+    const q = query(ref, where("userId", "==", user.uid), orderBy("updatedAt", "desc"), limit(50));
+
+    getDocs(q).then((snap) => {
+      const rows = snap.docs.map((doc) => {
+        const d = doc.data();
+        return {
+          id: doc.id,
+          name: d.name ?? "",
+          description: d.description ?? "",
+          document: d.document ?? "",
+          document_json: d.documentJson ?? d.document_json ?? null,
+          is_public: d.isPublic ?? d.is_public ?? false,
+          created_at: d.createdAt?.toDate?.() ? d.createdAt.toDate().toISOString() : new Date(d.createdAt ?? Date.now()).toISOString(),
+        } satisfies ContextPackage;
+      });
+      setPackages(rows);
+      setFetching(false);
+    }).catch((err) => {
+      console.error("Failed to fetch packages:", err);
+      setFetching(false);
+    });
+  }, [user, loading, router]);
+
+  if (loading || fetching) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", color: "#555" }}>
+        Loading...
+      </div>
+    );
+  }
 
   return (
     <div style={{ maxWidth: 900, margin: "0 auto", padding: "32px 24px" }}>
@@ -31,18 +79,13 @@ export default async function PackagesPage() {
       <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 20 }}>
         Context Packages
         <span style={{ fontSize: 14, fontWeight: 400, color: "#666", marginLeft: 10 }}>
-          {packages?.length ?? 0} total
+          {packages.length} total
         </span>
       </h1>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        {(packages ?? []).map((pkg) => {
-          const doc = pkg.document_json as {
-            summary?: string;
-            decisionsMade?: string[];
-            openQuestions?: string[];
-            suggestedNextSteps?: string[];
-          } | null;
+        {packages.map((pkg) => {
+          const doc = pkg.document_json;
 
           return (
             <div
@@ -61,14 +104,14 @@ export default async function PackagesPage() {
                 </div>
               )}
 
-              {doc?.decisionsMade?.length && (
+              {doc?.decisionsMade?.length ? (
                 <div style={{ marginBottom: 8 }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: "#555", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.5px" }}>Decisions Made</div>
                   {doc.decisionsMade.slice(0, 3).map((d, i) => (
                     <div key={i} style={{ fontSize: 12, color: "#888", marginBottom: 2 }}>• {d}</div>
                   ))}
                 </div>
-              )}
+              ) : null}
 
               <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
                 <button
@@ -77,7 +120,7 @@ export default async function PackagesPage() {
                     cursor: "pointer", fontFamily: "inherit", fontSize: 12, fontWeight: 600,
                     padding: "6px 14px",
                   }}
-                  onClick={undefined}
+                  onClick={() => navigator.clipboard.writeText(pkg.document)}
                 >
                   Copy to clipboard
                 </button>
@@ -86,7 +129,7 @@ export default async function PackagesPage() {
           );
         })}
 
-        {!packages?.length && (
+        {!packages.length && (
           <div style={{ textAlign: "center", color: "#555", padding: "60px 0" }}>
             <div style={{ fontSize: 36, marginBottom: 10 }}>⊕</div>
             <div>No Context Packages yet.</div>

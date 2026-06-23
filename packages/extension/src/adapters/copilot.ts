@@ -1,6 +1,6 @@
 import type { Message, SidebarItem, PlatformSelectors } from "../types.js";
 import type { PlatformAdapter } from "./base.js";
-import { injectIntoElement, deduplicateSidebar, querySelector } from "./base.js";
+import { injectIntoElement, deduplicateSidebar, querySelector, genericSidebarScrape, genericMessageExtract } from "./base.js";
 
 const DEFAULT_SELECTORS = {
   messagesTurn: [
@@ -35,6 +35,7 @@ export class CopilotAdapter implements PlatformAdapter {
     const s    = selectors ?? DEFAULT_SELECTORS;
     const msgs: Message[] = [];
 
+    // Strategy 1: data-content attributes
     if (s.userTurnAttr) {
       const userSel   = `[${s.userTurnAttr}="${s.userTurnValue ?? "user-message"}"]`;
       const assistSel = `[${s.userTurnAttr}="${s.assistantTurnValue ?? "ai-message"}"]`;
@@ -48,10 +49,56 @@ export class CopilotAdapter implements PlatformAdapter {
           const content = el.innerText.trim();
           if (content) msgs.push({ role, content, timestamp: Date.now() });
         });
-        return msgs.filter((m) => m.content.length > 0);
+        if (msgs.length >= 2) return msgs.filter((m) => m.content.length > 0);
       }
     }
 
+    // Strategy 2: Copilot web component turn structure
+    const turnGroups = document.querySelectorAll<HTMLElement>('[class*="turn-group"], [class*="TurnGroup"], [class*="chat-turn"]');
+    if (turnGroups.length > 0) {
+      turnGroups.forEach((group) => {
+        const cls = group.className.toLowerCase();
+        const role = cls.includes('user') || cls.includes('human') ? 'user' as const : 'assistant' as const;
+        const content = group.innerText.trim();
+        if (content) msgs.push({ role, content, timestamp: Date.now() });
+      });
+      if (msgs.length >= 2) {
+        const seen = new Set<string>();
+        return msgs.filter((m) => {
+          if (seen.has(m.content) || !m.content) return false;
+          seen.add(m.content);
+          return true;
+        });
+      }
+    }
+
+    // Strategy 3: Shadow DOM piercing for Copilot web components
+    const cibHost = document.querySelector('cib-serp');
+    const shadow1 = cibHost?.shadowRoot;
+    if (shadow1) {
+      const conversation = shadow1.querySelector('cib-conversation');
+      const shadow2 = conversation?.shadowRoot;
+      if (shadow2) {
+        const turns = shadow2.querySelectorAll('cib-chat-turn');
+        turns.forEach((turn) => {
+          const shadow3 = turn.shadowRoot;
+          if (!shadow3) return;
+          const userMsg = shadow3.querySelector('cib-message-group[source="user"]');
+          const botMsg = shadow3.querySelector('cib-message-group[source="bot"]');
+          if (userMsg) {
+            const content = (userMsg as HTMLElement).innerText.trim();
+            if (content) msgs.push({ role: 'user', content, timestamp: Date.now() });
+          }
+          if (botMsg) {
+            const content = (botMsg as HTMLElement).innerText.trim();
+            if (content) msgs.push({ role: 'assistant', content, timestamp: Date.now() });
+          }
+        });
+        if (msgs.length >= 2) return msgs.filter((m) => m.content.length > 0);
+      }
+    }
+
+    // Strategy 4: class-based fallback
     for (const sel of (s.messagesTurn ?? DEFAULT_SELECTORS.messagesTurn)) {
       try {
         document.querySelectorAll<HTMLElement>(sel).forEach((el) => {
@@ -59,6 +106,11 @@ export class CopilotAdapter implements PlatformAdapter {
           if (content) msgs.push({ role: "assistant", content, timestamp: Date.now() });
         });
       } catch { /* skip */ }
+    }
+
+    if (msgs.length < 2) {
+      const generic = genericMessageExtract();
+      if (generic.length >= 2) return generic;
     }
 
     const seen = new Set<string>();
@@ -82,7 +134,9 @@ export class CopilotAdapter implements PlatformAdapter {
         if (items.length) break;
       } catch { /* skip */ }
     }
-    return deduplicateSidebar(items);
+    const result = deduplicateSidebar(items);
+    if (result.length > 0) return result;
+    return genericSidebarScrape("copilot.microsoft.com");
   }
 
   findInputElement(selectors?: PlatformSelectors): HTMLElement | null {

@@ -1,6 +1,6 @@
 import type { Message, SidebarItem, PlatformSelectors } from "../types.js";
 import type { PlatformAdapter } from "./base.js";
-import { injectIntoElement, deduplicateSidebar, querySelectorAll, querySelector } from "./base.js";
+import { injectIntoElement, deduplicateSidebar, querySelectorAll, querySelector, genericSidebarScrape, genericMessageExtract } from "./base.js";
 
 const DEFAULT_SELECTORS = {
   messagesTurn: [

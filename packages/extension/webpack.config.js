@@ -21,7 +21,6 @@ module.exports = (env, argv) => ({
 
   resolve: {
     extensions: [".ts", ".js"],
-    // Allow .js imports to resolve to .ts files (TypeScript ESM import style)
     extensionAlias: {
       ".js": [".ts", ".js"],
     },
@@ -52,15 +51,18 @@ module.exports = (env, argv) => ({
       ],
     }),
 
-    // Inject Supabase config at build time — anon key is safe for client-side use (protected by RLS)
     new webpack.DefinePlugin({
-      __SUPABASE_URL__:      JSON.stringify(process.env.SUPABASE_URL      ?? ""),
-      __SUPABASE_ANON_KEY__: JSON.stringify(process.env.SUPABASE_ANON_KEY ?? ""),
-      __SELECTORS_URL__:     JSON.stringify(process.env.SELECTORS_URL     ?? ""),
+      __FIREBASE_API_KEY__:              JSON.stringify(process.env.FIREBASE_API_KEY ?? ""),
+      __FIREBASE_AUTH_DOMAIN__:          JSON.stringify(process.env.FIREBASE_AUTH_DOMAIN ?? ""),
+      __FIREBASE_PROJECT_ID__:           JSON.stringify(process.env.FIREBASE_PROJECT_ID ?? ""),
+      __FIREBASE_STORAGE_BUCKET__:       JSON.stringify(process.env.FIREBASE_STORAGE_BUCKET ?? ""),
+      __FIREBASE_MESSAGING_SENDER_ID__:  JSON.stringify(process.env.FIREBASE_MESSAGING_SENDER_ID ?? ""),
+      __FIREBASE_APP_ID__:               JSON.stringify(process.env.FIREBASE_APP_ID ?? ""),
+      __GOOGLE_CLIENT_ID__:              JSON.stringify(process.env.GOOGLE_CLIENT_ID ?? ""),
+      __GEMINI_API_KEY__:                JSON.stringify(process.env.GEMINI_API_KEY ?? ""),
     }),
   ],
 
-  // Avoid bundling duplicates across chunks
   optimization: {
     splitChunks: false,
   },

@@ -1,0 +1,20 @@
+{
+  "name": "llm-memory-functions",
+  "private": true,
+  "main": "lib/index.js",
+  "scripts": {
+    "build": "tsc",
+    "deploy": "firebase deploy --only functions"
+  },
+  "engines": {
+    "node": "20"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.0.0",
+    "firebase-functions": "^6.3.0",
+    "@google-cloud/vertexai": "^1.9.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  }
+}

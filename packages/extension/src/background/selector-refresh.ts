@@ -5,7 +5,7 @@
 import type { SelectorRegistry } from "../types.js";
 import { cacheSelectors, getCachedSelectors } from "../local-db/index.js";
 
-declare const __SELECTORS_URL__: string;
+// Selectors are now bundled — no remote fetch needed
 
 // Bundled fallback — always available even offline
 const BUNDLED_DEFAULTS: SelectorRegistry = {
@@ -43,36 +43,11 @@ const BUNDLED_DEFAULTS: SelectorRegistry = {
 };
 
 export async function refreshSelectorRegistry(): Promise<SelectorRegistry> {
-  const url = __SELECTORS_URL__;
+  const cached = await getCachedSelectors();
+  if (cached && Object.keys(cached).length > 0) return cached;
 
-  if (!url) {
-    const cached = await getCachedSelectors();
-    return cached ?? BUNDLED_DEFAULTS;
-  }
-
-  try {
-    const res = await fetch(url, {
-      cache: "no-cache",
-      signal: AbortSignal.timeout(5000),
-    });
-
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-    const data = await res.json();
-
-    // Flatten the registry format from the Edge Function response
-    const registry: SelectorRegistry = {};
-    for (const [platform, entry] of Object.entries(data)) {
-      registry[platform as keyof SelectorRegistry] = (entry as { selectors: SelectorRegistry[keyof SelectorRegistry] }).selectors;
-    }
-
-    await cacheSelectors(registry);
-    return registry;
-  } catch (e) {
-    console.warn("[LLM Memory] Selector refresh failed, using cache:", e);
-    const cached = await getCachedSelectors();
-    return cached ?? BUNDLED_DEFAULTS;
-  }
+  await cacheSelectors(BUNDLED_DEFAULTS);
+  return BUNDLED_DEFAULTS;
 }
 
 export { BUNDLED_DEFAULTS };

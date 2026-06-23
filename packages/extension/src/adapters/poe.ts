@@ -1,6 +1,6 @@
 import type { Message, SidebarItem, PlatformSelectors } from "../types.js";
 import type { PlatformAdapter } from "./base.js";
-import { injectIntoElement, deduplicateSidebar, querySelector } from "./base.js";
+import { injectIntoElement, deduplicateSidebar, querySelector, genericSidebarScrape, genericMessageExtract } from "./base.js";
 
 const DEFAULT_SELECTORS = {
   messagesTurn: [
@@ -38,6 +38,7 @@ export class PoeAdapter implements PlatformAdapter {
     const s    = selectors ?? DEFAULT_SELECTORS;
     const msgs: Message[] = [];
 
+    // Strategy 1: data-message-type attribute
     if (s.userTurnAttr) {
       const userSel   = `[${s.userTurnAttr}="${s.userTurnValue ?? "human"}"]`;
       const assistSel = `[${s.userTurnAttr}="${s.assistantTurnValue ?? "bot"}"]`;
@@ -51,10 +52,11 @@ export class PoeAdapter implements PlatformAdapter {
           const content = el.innerText.trim();
           if (content) msgs.push({ role, content, timestamp: Date.now() });
         });
-        return msgs.filter((m) => m.content.length > 0);
+        if (msgs.length >= 2) return msgs.filter((m) => m.content.length > 0);
       }
     }
 
+    // Strategy 2: class-based message bubbles
     USER_PATTERNS.forEach((pattern) => {
       try {
         document.querySelectorAll<HTMLElement>(`[class*="${pattern}"]`).forEach((el) => {
@@ -72,6 +74,33 @@ export class PoeAdapter implements PlatformAdapter {
         });
       } catch { /* skip */ }
     });
+
+    if (msgs.length >= 2) {
+      const seen = new Set<string>();
+      return msgs.filter((m) => {
+        if (seen.has(m.content)) return false;
+        seen.add(m.content);
+        return m.content.length > 0;
+      });
+    }
+
+    // Strategy 3: Poe's message pair structure (each message in a container with role info)
+    const messageRows = document.querySelectorAll<HTMLElement>('[class*="Message_row"], [class*="message_row"], [class*="ChatMessage"]');
+    if (messageRows.length >= 2) {
+      messageRows.forEach((row) => {
+        const cls = row.className.toLowerCase();
+        const isHuman = cls.includes('human') || cls.includes('user');
+        const role = isHuman ? 'user' as const : 'assistant' as const;
+        const contentEl = row.querySelector<HTMLElement>('.markdown, [class*="Markdown"], [class*="messageText"]') ?? row;
+        const content = contentEl.innerText.trim();
+        if (content) msgs.push({ role, content, timestamp: Date.now() });
+      });
+    }
+
+    if (msgs.length < 2) {
+      const generic = genericMessageExtract();
+      if (generic.length >= 2) return generic;
+    }
 
     const seen = new Set<string>();
     return msgs.filter((m) => {
@@ -94,7 +123,9 @@ export class PoeAdapter implements PlatformAdapter {
         if (items.length) break;
       } catch { /* skip */ }
     }
-    return deduplicateSidebar(items);
+    const result = deduplicateSidebar(items);
+    if (result.length > 0) return result;
+    return genericSidebarScrape("poe.com");
   }
 
   findInputElement(selectors?: PlatformSelectors): HTMLElement | null {

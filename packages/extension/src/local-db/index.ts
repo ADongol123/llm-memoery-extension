@@ -7,7 +7,19 @@ import type { Conversation, ContextPackage, ExtensionSettings, SelectorRegistry 
 import { DEFAULT_SETTINGS, ALL_PLATFORMS } from "../types.js";
 
 const DB_NAME    = "llm-memory";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
+
+export interface LocalChunk {
+  id: string;
+  conversationId: string;
+  contentType: "text" | "code";
+  rawContent: string;
+  processedContent: string;
+  chunkIndex: number;
+  embedding: number[];
+  metadata: Record<string, unknown>;
+  createdAt: number;
+}
 
 interface LLMMemoryDB extends DBSchema {
   conversations: {
@@ -34,6 +46,13 @@ interface LLMMemoryDB extends DBSchema {
     key:   string;
     value: { id: string; type: "upsert" | "delete"; table: string; payload: unknown; createdAt: number };
   };
+  chunks: {
+    key:   string;
+    value: LocalChunk;
+    indexes: {
+      "by-conversation": string;
+    };
+  };
 }
 
 let _db: IDBPDatabase<LLMMemoryDB> | null = null;
@@ -42,23 +61,20 @@ async function getDB(): Promise<IDBPDatabase<LLMMemoryDB>> {
   if (_db) return _db;
 
   _db = await openDB<LLMMemoryDB>(DB_NAME, DB_VERSION, {
-    upgrade(db) {
-      // Conversations store
-      const convStore = db.createObjectStore("conversations", { keyPath: "id" });
-      convStore.createIndex("by-platform",   "platform");
-      convStore.createIndex("by-updated-at", "updatedAt");
-
-      // Packages store
-      db.createObjectStore("packages", { keyPath: "id" });
-
-      // Settings
-      db.createObjectStore("settings");
-
-      // Selector registry cache
-      db.createObjectStore("selectors");
-
-      // Sync queue for offline-first writes
-      db.createObjectStore("sync_queue", { keyPath: "id" });
+    upgrade(db, oldVersion) {
+      if (oldVersion < 1) {
+        const convStore = db.createObjectStore("conversations", { keyPath: "id" });
+        convStore.createIndex("by-platform",   "platform");
+        convStore.createIndex("by-updated-at", "updatedAt");
+        db.createObjectStore("packages", { keyPath: "id" });
+        db.createObjectStore("settings");
+        db.createObjectStore("selectors");
+        db.createObjectStore("sync_queue", { keyPath: "id" });
+      }
+      if (oldVersion < 2) {
+        const chunkStore = db.createObjectStore("chunks", { keyPath: "id" });
+        chunkStore.createIndex("by-conversation", "conversationId");
+      }
     },
   });
 
@@ -202,4 +218,32 @@ export async function deleteSyncOp(id: string): Promise<void> {
 export async function clearSyncQueue(): Promise<void> {
   const db = await getDB();
   await db.clear("sync_queue");
+}
+
+// ── Chunks (local embeddings) ─────────────────────────────────────────────────
+
+export async function saveChunks(chunks: LocalChunk[]): Promise<void> {
+  const db = await getDB();
+  const tx = db.transaction("chunks", "readwrite");
+  for (const chunk of chunks) {
+    tx.store.put(chunk);
+  }
+  await tx.done;
+}
+
+export async function getChunksByConversation(conversationId: string): Promise<LocalChunk[]> {
+  const db = await getDB();
+  return db.getAllFromIndex("chunks", "by-conversation", conversationId);
+}
+
+export async function deleteChunksByConversation(conversationId: string): Promise<void> {
+  const db = await getDB();
+  const tx = db.transaction("chunks", "readwrite");
+  const index = tx.store.index("by-conversation");
+  let cursor = await index.openCursor(conversationId);
+  while (cursor) {
+    cursor.delete();
+    cursor = await cursor.continue();
+  }
+  await tx.done;
 }

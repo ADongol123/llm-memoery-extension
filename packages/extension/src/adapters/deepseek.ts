@@ -1,6 +1,6 @@
 import type { Message, SidebarItem, PlatformSelectors } from "../types.js";
 import type { PlatformAdapter } from "./base.js";
-import { injectIntoElement, deduplicateSidebar, querySelector } from "./base.js";
+import { injectIntoElement, deduplicateSidebar, querySelector, genericSidebarScrape, genericMessageExtract } from "./base.js";
 
 const DEFAULT_SELECTORS = {
   messagesTurn: [
@@ -37,7 +37,7 @@ export class DeepSeekAdapter implements PlatformAdapter {
     const msgs: Message[] = [];
     const s = selectors ?? DEFAULT_SELECTORS;
 
-    // Try data-role attribute first
+    // Strategy 1: data-role attribute
     if (s.userTurnAttr) {
       const attr      = s.userTurnAttr;
       const userVal   = s.userTurnValue ?? "user";
@@ -60,11 +60,62 @@ export class DeepSeekAdapter implements PlatformAdapter {
             const content = el.innerText.trim();
             if (content) msgs.push({ role, content, timestamp: Date.now() });
           });
-        return msgs.filter((m) => m.content.length > 0);
+        if (msgs.length >= 2) return msgs.filter((m) => m.content.length > 0);
       }
     }
 
-    // Fallback: class-based
+    // Strategy 2: DeepSeek's chat turn structure (alternating user/assistant containers)
+    const chatTurns = document.querySelectorAll<HTMLElement>('[class*="chat-message"], [class*="chatMessage"]');
+    if (chatTurns.length > 0) {
+      chatTurns.forEach((turn) => {
+        const cls = turn.className.toLowerCase();
+        const hasMarkdown = turn.querySelector('.ds-markdown, .markdown');
+        const role = (cls.includes('user') || cls.includes('human') || !hasMarkdown) && !cls.includes('assistant')
+          ? 'user' as const : 'assistant' as const;
+        const contentEl = hasMarkdown ?? turn;
+        const content = (contentEl as HTMLElement).innerText.trim();
+        if (content) msgs.push({ role, content, timestamp: Date.now() });
+      });
+      if (msgs.length >= 2) {
+        const seen = new Set<string>();
+        return msgs.filter((m) => {
+          if (seen.has(m.content) || !m.content) return false;
+          seen.add(m.content);
+          return true;
+        });
+      }
+    }
+
+    // Strategy 3: ds-markdown for assistant + preceding siblings for user
+    const markdownEls = document.querySelectorAll<HTMLElement>('.ds-markdown');
+    if (markdownEls.length > 0) {
+      markdownEls.forEach((md) => {
+        // Walk up to find the turn container, then look for user message sibling
+        let turnContainer = md.parentElement;
+        while (turnContainer && !turnContainer.className.toLowerCase().match(/turn|message|chat/)) {
+          turnContainer = turnContainer.parentElement;
+        }
+        if (turnContainer) {
+          const prevSibling = turnContainer.previousElementSibling as HTMLElement | null;
+          if (prevSibling) {
+            const userContent = prevSibling.innerText.trim();
+            if (userContent) msgs.push({ role: 'user', content: userContent, timestamp: Date.now() });
+          }
+        }
+        const content = md.innerText.trim();
+        if (content) msgs.push({ role: 'assistant', content, timestamp: Date.now() });
+      });
+      if (msgs.length >= 2) {
+        const seen = new Set<string>();
+        return msgs.filter((m) => {
+          if (seen.has(m.content) || !m.content) return false;
+          seen.add(m.content);
+          return true;
+        });
+      }
+    }
+
+    // Strategy 4: class-based fallback
     USER_PATTERNS.forEach((pattern) => {
       try {
         document.querySelectorAll<HTMLElement>(`[class*="${pattern}"]`).forEach((el) => {
@@ -82,6 +133,11 @@ export class DeepSeekAdapter implements PlatformAdapter {
         });
       } catch { /* skip */ }
     });
+
+    if (msgs.length < 2) {
+      const generic = genericMessageExtract();
+      if (generic.length >= 2) return generic;
+    }
 
     const seen = new Set<string>();
     return msgs.filter((m) => {
@@ -106,7 +162,9 @@ export class DeepSeekAdapter implements PlatformAdapter {
       } catch { /* skip */ }
     }
 
-    return deduplicateSidebar(items);
+    const result = deduplicateSidebar(items);
+    if (result.length > 0) return result;
+    return genericSidebarScrape("chat.deepseek.com");
   }
 
   findInputElement(selectors?: PlatformSelectors): HTMLElement | null {

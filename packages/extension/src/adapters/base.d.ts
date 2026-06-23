@@ -11,6 +11,8 @@ export interface PlatformAdapter {
 }
 export declare function injectIntoElement(el: HTMLElement, text: string): boolean;
 export declare function deduplicateSidebar(items: SidebarItem[]): SidebarItem[];
+export declare function genericSidebarScrape(domain: string): SidebarItem[];
+export declare function genericMessageExtract(): Message[];
 export declare function querySelector<T extends Element>(selectors: string[], root?: Document | Element): T | null;
 export declare function querySelectorAll<T extends Element>(selectors: string[], root?: Document | Element): T[];
 //# sourceMappingURL=base.d.ts.map

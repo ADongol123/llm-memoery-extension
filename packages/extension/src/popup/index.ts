@@ -28,6 +28,7 @@ let isSyncing            = false;
 let activeRagPool: { conversationIds: string[]; activatedAt: number } | null = null;
 let sidebarCache:        Record<string, Array<{ title: string; url: string }>> = {};
 let selectedDiscovered:  Map<string, { title: string; url: string; platform: string }> = new Map();
+let pendingSyncIds:      Set<string> = new Set();
 // Maps a conversation URL → tabId for tabs currently open in the browser.
 // Used to silently extract content from already-open tabs at inject time.
 let openTabUrlMap: Map<string, number> = new Map();
@@ -36,6 +37,10 @@ let openTabUrlMap: Map<string, number> = new Map();
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
+const headerEl          = $("headerEl");
+const loginPanel        = $("loginPanel");
+const loginGoogleBtn    = $("loginGoogleBtn");
+const loginError        = $("loginError");
 const toggleInput       = $<HTMLInputElement>("toggleInput");
 const statusText        = $("statusText");
 const offState          = $("offState");
@@ -75,8 +80,7 @@ const selectHint        = $("selectHint");
 // Settings panel
 const autoSaveToggle  = $<HTMLInputElement>("autoSaveToggle");
 const pickerToggle    = $<HTMLInputElement>("pickerToggle");
-const emailInput      = $<HTMLInputElement>("emailInput");
-const signInBtn       = $("signInBtn");
+const googleSignInBtn = $("googleSignInBtn");
 const signInMsg       = $("signInMsg");
 const authSignedOut   = $("authSignedOut");
 const authSignedIn    = $("authSignedIn");
@@ -118,13 +122,13 @@ async function refreshOpenTabMap(): Promise<void> {
   );
 }
 
-// Silently extract conversation messages from an already-open tab without
-// focusing it or changing the user's active tab in any way.
+// Extract conversation messages from a tab. Uses GET_CONVERSATION_FULL which
+// auto-scrolls to load all lazy-loaded messages before extracting.
 function extractFromTab(tabId: number): Promise<import("../types.js").Message[]> {
   return new Promise((resolve) => {
     chrome.tabs.sendMessage(
       tabId,
-      { type: "GET_CONVERSATION" },
+      { type: "GET_CONVERSATION_FULL" },
       (res: { success?: boolean; messages?: import("../types.js").Message[] } | undefined) => {
         if (chrome.runtime.lastError || !res?.success) resolve([]);
         else resolve(res.messages ?? []);
@@ -136,13 +140,14 @@ function extractFromTab(tabId: number): Promise<import("../types.js").Message[]>
 // ── Data loading ───────────────────────────────────────────────────────────────
 
 async function loadAll(): Promise<void> {
-  const [convRes, pkgRes, settRes, authRes, cacheRes, poolRes] = await Promise.all([
+  const [convRes, pkgRes, settRes, authRes, cacheRes, poolRes, syncIdsRes] = await Promise.all([
     send<{ success: boolean; data: Conversation[] }>({ type: "GET_CONVERSATIONS" }),
     send<{ success: boolean; data: ContextPackage[] }>({ type: "GET_PACKAGES" }),
     send<{ success: boolean; data: ExtensionSettings }>({ type: "GET_SETTINGS" }),
     send<{ success: boolean; data: AuthSession | null }>({ type: "GET_AUTH" }),
     send<{ success: boolean; data: Record<string, Array<{ title: string; url: string }>> }>({ type: "GET_SIDEBAR_CACHE" }),
     send<{ success: boolean; data: { conversationIds: string[]; activatedAt: number } | null }>({ type: "GET_ACTIVE_RAG_POOL" }),
+    send<{ success: boolean; data: string[] }>({ type: "GET_PENDING_SYNC_IDS" }),
   ]);
 
   if (convRes.success) conversations = convRes.data ?? [];
@@ -151,6 +156,9 @@ async function loadAll(): Promise<void> {
   if (authRes.success) session       = authRes.data;
   if (cacheRes.success) sidebarCache = cacheRes.data ?? {};
   if (poolRes.success) activeRagPool = poolRes.data;
+  if (syncIdsRes.success) pendingSyncIds = new Set(syncIdsRes.data ?? []);
+
+  send({ type: "CLEAR_BADGE_COUNT" }).catch(() => {});
 
   briefingMode = settings.defaultBriefingMode ?? "full";
 
@@ -162,6 +170,8 @@ async function loadAll(): Promise<void> {
 function showPlatformSelect(fromSettings = false): void {
   mainPanel.classList.add("hidden");
   settingsPanel.classList.add("hidden");
+  loginPanel.classList.add("hidden");
+  headerEl.classList.remove("hidden");
   platformSelectPanel.classList.remove("hidden");
 
   const enabled = new Set(settings.enabledPlatforms ?? ALL_PLATFORMS);
@@ -357,6 +367,7 @@ function renderEmpty(): void {
   empty.className = "empty-state";
 
   const enabled = getEnabledPlatforms();
+  const hasSidebar = Object.values(sidebarCache).some((arr) => arr.length > 0);
 
   if (searchQuery) {
     empty.innerHTML = `<div class="empty-icon">⊘</div><div>No results for "${escHtml(searchQuery)}"</div>`;
@@ -367,19 +378,45 @@ function renderEmpty(): void {
       <div class="empty-hint">Open ${activeTab}, start a chat, and it'll appear here automatically.</div>
       <div class="empty-hint" style="margin-top:6px;">Or click <strong>⟳ Sync</strong> to scan your open tabs now.</div>
     `;
+  } else if (!hasSidebar) {
+    empty.innerHTML = `
+      <div class="onboarding-card">
+        <div class="onboarding-header">
+          <div style="font-size:24px;">⬡</div>
+          <div style="font-weight:700;font-size:14px;">Welcome to LLM Memory</div>
+          <div class="empty-hint">Your conversations, reusable across any AI</div>
+        </div>
+        <div class="onboarding-steps">
+          <div class="onboarding-step">
+            <div class="onboarding-step-num">1</div>
+            <div>
+              <div style="font-weight:600;font-size:11px;color:#d5d5d5;">Chat normally</div>
+              <div class="empty-hint">Use ChatGPT, Claude, Gemini, or any AI</div>
+            </div>
+          </div>
+          <div class="onboarding-step">
+            <div class="onboarding-step-num">2</div>
+            <div>
+              <div style="font-weight:600;font-size:11px;color:#d5d5d5;">Auto-captured</div>
+              <div class="empty-hint">Conversations save locally every 30s</div>
+            </div>
+          </div>
+          <div class="onboarding-step">
+            <div class="onboarding-step-num">3</div>
+            <div>
+              <div style="font-weight:600;font-size:11px;color:#d5d5d5;">Inject context</div>
+              <div class="empty-hint">Select past chats and inject into any new AI conversation</div>
+            </div>
+          </div>
+        </div>
+        <div class="empty-hint" style="margin-top:12px;">Start chatting on any AI, or click <strong>⟳ Sync</strong> above to discover existing conversations.</div>
+      </div>
+    `;
   } else {
-    const platformList = enabled.slice(0, 5).join(", ") + (enabled.length > 5 ? "…" : "");
     empty.innerHTML = `
       <div class="empty-icon">⬡</div>
       <div style="font-weight:600;">No conversations saved yet</div>
-      <div class="empty-hint" style="margin-top:8px;"><strong>How to get started:</strong></div>
-      <ol class="empty-steps">
-        <li>Open ${platformList}</li>
-        <li>Have a conversation (4+ messages)</li>
-        <li>Conversations auto-save every 30 seconds</li>
-        <li>Come back here, select one or more, then click <strong>Inject →</strong></li>
-      </ol>
-      <div class="empty-hint" style="margin-top:10px;">Already chatting? Click <strong>⟳ Sync</strong> above.</div>
+      <div class="empty-hint" style="margin-top:8px;">Click <strong>Capture →</strong> on a discovered conversation below, then wait 30 seconds on that page for it to auto-save.</div>
     `;
   }
 
@@ -402,10 +439,27 @@ function appendDivider(text: string): void {
 
 // ── Conversation item ──────────────────────────────────────────────────────────
 
+function getConvState(conv: Conversation): "local" | "synced" | "processing" | "rag-ready" {
+  if (conv.processedAt !== null) return "rag-ready";
+  if (pendingSyncIds.has(conv.id)) return "local";
+  const TEN_MIN = 10 * 60 * 1000;
+  if (Date.now() - conv.updatedAt < TEN_MIN) return "processing";
+  return "synced";
+}
+
+function stateBadgeHtml(state: "local" | "synced" | "processing" | "rag-ready"): string {
+  switch (state) {
+    case "local":      return `<span class="ai-badge state-local" title="Saved locally, waiting to sync">● local</span>`;
+    case "synced":     return `<span class="ai-badge state-synced" title="Synced to cloud">↑ synced</span>`;
+    case "processing": return `<span class="ai-badge state-processing" title="Processing for smart context…">⟳ processing</span>`;
+    case "rag-ready":  return `<span class="ai-badge state-rag-ready" title="Smart inject available">✦ smart</span>`;
+  }
+}
+
 function makeConvItem(conv: Conversation, num: number): HTMLElement {
   const key        = conv.id;
   const isSelected = selectedItems.has(key);
-  const hasAI      = !!conv.processedAt;
+  const state      = getConvState(conv);
 
   const el = document.createElement("div");
   el.className = [
@@ -430,9 +484,7 @@ function makeConvItem(conv: Conversation, num: number): HTMLElement {
       <div class="item-meta">
         <span class="platform-badge">${conv.platform}</span>
         ${conv.isSnippet ? `<span class="snippet-badge">snippet</span>` : ""}
-        ${hasAI
-          ? `<span class="ai-badge rag-ready" title="Smart inject available">✦ smart</span>`
-          : `<span class="ai-badge local-only" title="Local inject only">≈ local</span>`}
+        ${stateBadgeHtml(state)}
         <span>${timestamp}</span>
         ${!conv.isSnippet ? `<span>·</span><span>${conv.messageCount} msgs</span>` : ""}
       </div>
@@ -486,7 +538,7 @@ function makeSidebarItem(item: { title: string; url: string; platform: string })
           : `<span class="discovered-badge" title="Visit this URL first to capture it">not captured</span>`}
       </div>
     </div>
-    <button class="open-btn" title="Open in new tab">Open →</button>
+    <button class="open-btn" title="Open to capture conversation">Capture →</button>
   `;
 
   el.querySelector(".item-check")!.addEventListener("click", (e) => {
@@ -494,10 +546,80 @@ function makeSidebarItem(item: { title: string; url: string; platform: string })
     toggleSelectDiscovered(item, el);
   });
 
-  el.querySelector(".open-btn")!.addEventListener("click", (e) => {
+  el.querySelector(".open-btn")!.addEventListener("click", async (e) => {
     e.stopPropagation();
-    chrome.tabs.create({ url: item.url });
-    showToast("Opening — will auto-save in ~30s");
+    const btn = el.querySelector(".open-btn") as HTMLButtonElement;
+    btn.disabled = true;
+
+    // Use existing tab or open a new one
+    let tabId = openTabUrlMap.get(item.url);
+
+    if (!tabId) {
+      btn.textContent = "Opening…";
+      const tab = await new Promise<chrome.tabs.Tab>((r) =>
+        chrome.tabs.create({ url: item.url, active: true }, (t) => r(t))
+      );
+      if (!tab.id) {
+        btn.textContent = "Failed";
+        btn.style.color = "#ef4444";
+        return;
+      }
+      tabId = tab.id;
+
+      // Wait for page load
+      btn.textContent = "Loading…";
+      await new Promise<void>((res) => {
+        const onUpdated = (id: number, info: chrome.tabs.TabChangeInfo) => {
+          if (id === tabId && info.status === "complete") {
+            chrome.tabs.onUpdated.removeListener(onUpdated);
+            res();
+          }
+        };
+        chrome.tabs.onUpdated.addListener(onUpdated);
+        setTimeout(res, 15_000);
+      });
+    }
+
+    // Extract with retries
+    btn.textContent = "Extracting…";
+    let messages: import("../types.js").Message[] = [];
+    for (let attempt = 0; attempt < 6; attempt++) {
+      await new Promise((r) => setTimeout(r, 3000));
+      messages = await extractFromTab(tabId!);
+      btn.textContent = `Extracting… (${attempt + 1}/6)`;
+      if (messages.length >= 2) break;
+    }
+
+    if (messages.length >= 2) {
+      btn.textContent = "Saving…";
+      const conv: Conversation = {
+        id: `cap-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
+        platform: item.platform as Platform,
+        sourceUrl: item.url,
+        title: item.title,
+        messageCount: messages.length,
+        rawMessages: messages,
+        summary: null, keyPoints: null, openQuestions: null,
+        topics: null, entities: null, processedAt: null,
+        isAutoSave: false, isSnippet: false, pinned: false,
+        createdAt: Date.now(), updatedAt: Date.now(),
+      };
+      await send({ type: "SAVE_CONVERSATION", payload: conv });
+      btn.textContent = "Captured ✓";
+      btn.style.color = "#10b981";
+      showToast(`Captured "${item.title.slice(0, 30)}…" · ${messages.length} msgs`);
+      await loadAll();
+      render();
+    } else {
+      btn.textContent = "No messages";
+      btn.style.color = "#f59e0b";
+      showToast("Could not extract messages — try scrolling through the conversation first");
+      setTimeout(() => {
+        btn.textContent = "Capture →";
+        btn.style.color = "";
+        btn.disabled = false;
+      }, 3000);
+    }
   });
 
   el.addEventListener("click", (e) => {
@@ -602,7 +724,6 @@ function updateSelectionBar(): void {
   selectionBar.classList.toggle("hidden", count === 0);
   generatePkgBtn.classList.toggle("hidden", selectedItems.size === 0 || viewMode !== "conversations");
 
-  // "Activate" shown only when: saved convs selected (no discovered), all RAG-ready, signed in
   const savedConvs  = [...selectedItems.values()];
   const allRagReady = savedConvs.length > 0 && savedConvs.every((c) => c.processedAt !== null);
   const noDiscovered = selectedDiscovered.size === 0;
@@ -899,12 +1020,29 @@ async function syncAll(): Promise<void> {
   }
 }
 
+// ── Login screen ──────────────────────────────────────────────────────────────
+
+function showLogin(): void {
+  mainPanel.classList.add("hidden");
+  settingsPanel.classList.add("hidden");
+  platformSelectPanel.classList.add("hidden");
+  offState.classList.add("hidden");
+  loginPanel.classList.remove("hidden");
+  headerEl.classList.add("hidden");
+}
+
+function hideLogin(): void {
+  loginPanel.classList.add("hidden");
+  headerEl.classList.remove("hidden");
+}
+
 // ── Settings ───────────────────────────────────────────────────────────────────
 
 function showSettings(): void {
   mainPanel.classList.add("hidden");
   offState.classList.add("hidden");
   platformSelectPanel.classList.add("hidden");
+  loginPanel.classList.add("hidden");
   settingsPanel.classList.remove("hidden");
 
   autoSaveToggle.checked = settings.autoSaveEnabled;
@@ -1001,23 +1139,62 @@ clearRagPool.addEventListener("click", async () => {
 autoSaveToggle.addEventListener("change", saveSettingsNow);
 pickerToggle.addEventListener("change",   saveSettingsNow);
 
-signInBtn.addEventListener("click", async () => {
-  const email = emailInput.value.trim();
-  if (!email) return;
-  signInBtn.textContent = "Sending…";
-  const res = await send<{ success: boolean; error?: string }>({ type: "SIGN_IN", email });
-  signInBtn.textContent = "Send link";
-  signInMsg.classList.remove("hidden");
-  signInMsg.textContent = res.success
-    ? "✓ Check your email for the magic link"
-    : `Error: ${res.error ?? "Failed to send"}`;
+googleSignInBtn.addEventListener("click", async () => {
+  googleSignInBtn.textContent = "Signing in…";
+  (googleSignInBtn as HTMLButtonElement).disabled = true;
+  const res = await send<{ success: boolean; error?: string }>({ type: "SIGN_IN_GOOGLE" });
+  if (res.success) {
+    const authRes = await send<{ success: boolean; data: AuthSession | null }>({ type: "GET_AUTH" });
+    if (authRes.data) {
+      session = authRes.data;
+      authSignedOut.classList.add("hidden");
+      authSignedIn.classList.remove("hidden");
+      signedInEmail.textContent = session.email;
+      showToast("Signed in with Google");
+    }
+  } else {
+    signInMsg.classList.remove("hidden");
+    signInMsg.textContent = `Error: ${res.error ?? "Sign-in failed"}`;
+  }
+  googleSignInBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 01-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/><path d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/></svg> Sign in with Google`;
+  (googleSignInBtn as HTMLButtonElement).disabled = false;
+});
+
+const GOOGLE_BTN_SVG = `<svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 01-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/><path d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/></svg> Sign in with Google`;
+
+loginGoogleBtn.addEventListener("click", async () => {
+  loginGoogleBtn.textContent = "Signing in…";
+  (loginGoogleBtn as HTMLButtonElement).disabled = true;
+  loginError.classList.add("hidden");
+
+  const res = await send<{ success: boolean; error?: string }>({ type: "SIGN_IN_GOOGLE" });
+  if (res.success) {
+    const authRes = await send<{ success: boolean; data: AuthSession | null }>({ type: "GET_AUTH" });
+    if (authRes.data) {
+      session = authRes.data;
+      hideLogin();
+      if (!settings.enabledPlatforms) {
+        showPlatformSelect(false);
+      } else {
+        mainPanel.classList.remove("hidden");
+        render();
+      }
+      showToast("Signed in with Google");
+    }
+  } else {
+    loginError.textContent = res.error ?? "Sign-in failed. Please try again.";
+    loginError.classList.remove("hidden");
+  }
+
+  loginGoogleBtn.innerHTML = GOOGLE_BTN_SVG;
+  (loginGoogleBtn as HTMLButtonElement).disabled = false;
 });
 
 signOutBtn.addEventListener("click", async () => {
   await send({ type: "SIGN_OUT" });
   session = null;
-  authSignedOut.classList.remove("hidden");
-  authSignedIn.classList.add("hidden");
+  hideSettings();
+  showLogin();
   showToast("Signed out");
 });
 
@@ -1064,6 +1241,20 @@ chrome.storage.onChanged.addListener((changes, area) => {
       syncBtn.classList.remove("syncing");
       const total = Object.values(status.results ?? {}).reduce((n, v) => n + v, 0);
       showToast(total > 0 ? `Sync complete — ${total} conversations found ✓` : "Sync complete ✓");
+      send<{ success: boolean; data: string[] }>({ type: "GET_PENDING_SYNC_IDS" }).then((res) => {
+        if (res.success) pendingSyncIds = new Set(res.data ?? []);
+        render();
+      }).catch(() => {});
+    }
+  }
+
+  if ("llm_auth_session" in changes) {
+    const newSession = changes.llm_auth_session.newValue as AuthSession | undefined;
+    if (newSession) {
+      session = newSession;
+    } else {
+      session = null;
+      showLogin();
     }
   }
 });
@@ -1078,7 +1269,29 @@ async function init(): Promise<void> {
   toggleInput.checked    = settings.autoSaveEnabled !== false;
   statusText.textContent = toggleInput.checked ? "Saving" : "Paused";
 
-  // First-run: show platform selection screen if enabledPlatforms has never been set
+  // Auth gate: if no session, try refreshing; if still nothing, show login
+  if (!session) {
+    showLogin();
+    return;
+  }
+
+  // Token expired — try background refresh
+  if (session.expiresAt > 0 && session.expiresAt < Math.floor(Date.now() / 1000)) {
+    try {
+      const refreshRes = await send<{ success: boolean; data: AuthSession | null }>({ type: "REFRESH_AUTH" });
+      if (refreshRes.success && refreshRes.data) {
+        session = refreshRes.data;
+      } else {
+        session = null;
+        showLogin();
+        return;
+      }
+    } catch {
+      // Network error — keep stale session rather than forcing re-login
+    }
+  }
+
+  // Platform selection if first run
   if (!settings.enabledPlatforms) {
     showPlatformSelect(false);
   } else {

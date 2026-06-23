@@ -1,12 +1,5 @@
-export const dynamic = "force-dynamic";
+import LandingPage from "./landing/LandingPage";
 
-import { createServerSupabaseClient } from "../lib/supabase-server";
-import { redirect } from "next/navigation";
-
-export default async function HomePage() {
-  const supabase = await createServerSupabaseClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) redirect("/auth");
-  redirect("/conversations");
+export default function HomePage() {
+  return <LandingPage />;
 }

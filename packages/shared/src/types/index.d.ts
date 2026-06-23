@@ -140,6 +140,8 @@ export type ExtensionMessage = {
 } | {
     type: "GET_CONVERSATION";
 } | {
+    type: "GET_CONVERSATION_FULL";
+} | {
     type: "GET_PLATFORM";
 } | {
     type: "INJECT_TEXT";
@@ -182,6 +184,8 @@ export type ExtensionMessage = {
     type: "SIGN_IN";
     email: string;
 } | {
+    type: "SIGN_IN_GOOGLE";
+} | {
     type: "SIGN_OUT";
 } | {
     type: "AUTH_CALLBACK";
@@ -214,6 +218,12 @@ export type ExtensionMessage = {
 } | {
     type: "RETRIEVE_RAG_CONTEXT";
     userMessage: string;
+} | {
+    type: "GET_PENDING_SYNC_IDS";
+} | {
+    type: "CLEAR_BADGE_COUNT";
+} | {
+    type: "REFRESH_AUTH";
 };
 export interface ExtensionSettings {
     pickerEnabled: boolean;

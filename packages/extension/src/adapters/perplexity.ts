@@ -1,6 +1,6 @@
 import type { Message, SidebarItem, PlatformSelectors } from "../types.js";
 import type { PlatformAdapter } from "./base.js";
-import { injectIntoElement, deduplicateSidebar, querySelector } from "./base.js";
+import { injectIntoElement, deduplicateSidebar, querySelector, genericSidebarScrape, genericMessageExtract } from "./base.js";
 
 const DEFAULT_SELECTORS = {
   messagesTurn: [
@@ -31,6 +31,7 @@ export class PerplexityAdapter implements PlatformAdapter {
     const s    = selectors ?? DEFAULT_SELECTORS;
     const msgs: Message[] = [];
 
+    // Strategy 1: data-testid attributes
     if (s.userTurnAttr) {
       const userSel  = `[${s.userTurnAttr}="${s.userTurnValue ?? "user-message"}"]`;
       const assistSel = `[${s.userTurnAttr}="${s.assistantTurnValue ?? "answer"}"]`;
@@ -44,10 +45,63 @@ export class PerplexityAdapter implements PlatformAdapter {
           const content = el.innerText.trim();
           if (content) msgs.push({ role, content, timestamp: Date.now() });
         });
-        return msgs.filter((m) => m.content.length > 0);
+        if (msgs.length >= 2) return msgs.filter((m) => m.content.length > 0);
       }
     }
 
+    // Strategy 2: query/answer block structure (Perplexity's thread-based UI)
+    const queryBlocks = document.querySelectorAll<HTMLElement>('[class*="QueryBlock"], [class*="query-block"], [class*="UserQuery"]');
+    const answerBlocks = document.querySelectorAll<HTMLElement>('[class*="AnswerBlock"], [class*="answer-block"], [class*="AnswerContent"], .prose');
+    if (queryBlocks.length > 0 || answerBlocks.length > 0) {
+      const items: { el: HTMLElement; role: "user" | "assistant" }[] = [];
+      queryBlocks.forEach((el) => items.push({ el, role: "user" }));
+      answerBlocks.forEach((el) => items.push({ el, role: "assistant" }));
+      items
+        .sort((a, b) =>
+          a.el.compareDocumentPosition(b.el) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1
+        )
+        .forEach(({ el, role }) => {
+          const content = el.innerText.trim();
+          if (content) msgs.push({ role, content, timestamp: Date.now() });
+        });
+      if (msgs.length >= 2) {
+        const seen = new Set<string>();
+        return msgs.filter((m) => {
+          if (seen.has(m.content) || !m.content) return false;
+          seen.add(m.content);
+          return true;
+        });
+      }
+    }
+
+    // Strategy 3: thread-based layout with question headings and answer sections
+    const threadItems = document.querySelectorAll<HTMLElement>('[class*="ThreadItem"], [class*="thread-item"], [class*="SearchResult"]');
+    if (threadItems.length > 0) {
+      threadItems.forEach((item) => {
+        // Find the query text (usually a heading or bold text at the top)
+        const queryEl = item.querySelector<HTMLElement>('h2, h3, [class*="query"], [class*="question"]');
+        if (queryEl) {
+          const qContent = queryEl.innerText.trim();
+          if (qContent) msgs.push({ role: 'user', content: qContent, timestamp: Date.now() });
+        }
+        // Find the answer text (markdown/prose content)
+        const answerEl = item.querySelector<HTMLElement>('.prose, .markdown, [class*="answer"], [class*="Answer"]');
+        if (answerEl) {
+          const aContent = answerEl.innerText.trim();
+          if (aContent) msgs.push({ role: 'assistant', content: aContent, timestamp: Date.now() });
+        }
+      });
+      if (msgs.length >= 2) {
+        const seen = new Set<string>();
+        return msgs.filter((m) => {
+          if (seen.has(m.content) || !m.content) return false;
+          seen.add(m.content);
+          return true;
+        });
+      }
+    }
+
+    // Strategy 4: fallback with messagesTurn selectors
     for (const sel of (s.messagesTurn ?? DEFAULT_SELECTORS.messagesTurn)) {
       try {
         document.querySelectorAll<HTMLElement>(sel).forEach((el) => {
@@ -55,6 +109,11 @@ export class PerplexityAdapter implements PlatformAdapter {
           if (content) msgs.push({ role: "assistant", content, timestamp: Date.now() });
         });
       } catch { /* skip */ }
+    }
+
+    if (msgs.length < 2) {
+      const generic = genericMessageExtract();
+      if (generic.length >= 2) return generic;
     }
 
     const seen = new Set<string>();
@@ -78,7 +137,9 @@ export class PerplexityAdapter implements PlatformAdapter {
         if (items.length) break;
       } catch { /* skip */ }
     }
-    return deduplicateSidebar(items);
+    const result = deduplicateSidebar(items);
+    if (result.length > 0) return result;
+    return genericSidebarScrape("perplexity.ai");
   }
 
   findInputElement(selectors?: PlatformSelectors): HTMLElement | null {

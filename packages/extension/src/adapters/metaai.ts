@@ -1,6 +1,6 @@
 import type { Message, SidebarItem, PlatformSelectors } from "../types.js";
 import type { PlatformAdapter } from "./base.js";
-import { injectIntoElement, deduplicateSidebar, querySelector } from "./base.js";
+import { injectIntoElement, deduplicateSidebar, querySelector, genericSidebarScrape, genericMessageExtract } from "./base.js";
 
 const DEFAULT_SELECTORS = {
   messagesTurn: [
@@ -36,6 +36,7 @@ export class MetaAIAdapter implements PlatformAdapter {
     const s    = selectors ?? DEFAULT_SELECTORS;
     const msgs: Message[] = [];
 
+    // Strategy 1: data-sender attribute
     if (s.userTurnAttr) {
       const userSel   = `[${s.userTurnAttr}="${s.userTurnValue ?? "user"}"]`;
       const assistSel = `[${s.userTurnAttr}="${s.assistantTurnValue ?? "assistant"}"]`;
@@ -49,10 +50,55 @@ export class MetaAIAdapter implements PlatformAdapter {
           const content = el.innerText.trim();
           if (content) msgs.push({ role, content, timestamp: Date.now() });
         });
-        return msgs.filter((m) => m.content.length > 0);
+        if (msgs.length >= 2) return msgs.filter((m) => m.content.length > 0);
       }
     }
 
+    // Strategy 2: Meta AI's message bubbles (class-based)
+    const userBubbles = document.querySelectorAll<HTMLElement>('[class*="user-message"], [class*="UserMessage"], [class*="humanMessage"]');
+    const aiBubbles = document.querySelectorAll<HTMLElement>('[class*="ai-message"], [class*="MetaMessage"], [class*="botMessage"], [class*="assistant"]');
+    if (userBubbles.length > 0 || aiBubbles.length > 0) {
+      const items: { el: HTMLElement; role: "user" | "assistant" }[] = [];
+      userBubbles.forEach((el) => items.push({ el, role: 'user' }));
+      aiBubbles.forEach((el) => items.push({ el, role: 'assistant' }));
+      items
+        .sort((a, b) =>
+          a.el.compareDocumentPosition(b.el) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1
+        )
+        .forEach(({ el, role }) => {
+          const content = el.innerText.trim();
+          if (content) msgs.push({ role, content, timestamp: Date.now() });
+        });
+      if (msgs.length >= 2) {
+        const seen = new Set<string>();
+        return msgs.filter((m) => {
+          if (seen.has(m.content) || !m.content) return false;
+          seen.add(m.content);
+          return true;
+        });
+      }
+    }
+
+    // Strategy 3: role-based containers
+    const roleEls = document.querySelectorAll<HTMLElement>('[role="listitem"], [role="row"]');
+    if (roleEls.length >= 2) {
+      roleEls.forEach((el, i) => {
+        const content = el.innerText.trim();
+        if (content && content.length > 1) {
+          msgs.push({ role: i % 2 === 0 ? 'user' : 'assistant', content, timestamp: Date.now() });
+        }
+      });
+      if (msgs.length >= 2) {
+        const seen = new Set<string>();
+        return msgs.filter((m) => {
+          if (seen.has(m.content) || !m.content) return false;
+          seen.add(m.content);
+          return true;
+        });
+      }
+    }
+
+    // Strategy 4: fallback messagesTurn selectors
     for (const sel of (s.messagesTurn ?? DEFAULT_SELECTORS.messagesTurn)) {
       try {
         document.querySelectorAll<HTMLElement>(sel).forEach((el) => {
@@ -60,6 +106,11 @@ export class MetaAIAdapter implements PlatformAdapter {
           if (content) msgs.push({ role: "assistant", content, timestamp: Date.now() });
         });
       } catch { /* skip */ }
+    }
+
+    if (msgs.length < 2) {
+      const generic = genericMessageExtract();
+      if (generic.length >= 2) return generic;
     }
 
     const seen = new Set<string>();
@@ -83,7 +134,9 @@ export class MetaAIAdapter implements PlatformAdapter {
         if (items.length) break;
       } catch { /* skip */ }
     }
-    return deduplicateSidebar(items);
+    const result = deduplicateSidebar(items);
+    if (result.length > 0) return result;
+    return genericSidebarScrape("meta.ai");
   }
 
   findInputElement(selectors?: PlatformSelectors): HTMLElement | null {
