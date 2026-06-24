@@ -1,5 +1,5 @@
 {
-  "name": "llm-memory-functions",
+  "name": "stash-functions",
   "private": true,
   "main": "lib/index.js",
   "scripts": {

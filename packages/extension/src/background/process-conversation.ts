@@ -1,97 +1,18 @@
 // Processes a conversation locally in the extension:
-// 1. Summarizes with Gemini Flash
-// 2. Generates embeddings with Gemini text-embedding-004
+// 1. Extracts summary using local extractive summarization (no API)
+// 2. Generates embeddings using local MiniLM model (no API)
 // 3. Updates conversation in Firestore
 // 4. Creates and stores searchable chunks
 
 import { getDb, getAuthenticatedUser } from "./firebase-client.js";
 import { doc, updateDoc, collection, query, where, getDocs, writeBatch, Timestamp } from "firebase/firestore";
 import { saveChunks, getChunksByConversation, deleteChunksByConversation, type LocalChunk } from "../local-db/index.js";
-
-declare const __GEMINI_API_KEY__: string;
-
-const GEMINI_MODEL = "gemini-2.0-flash";
-const EMBED_MODEL = "text-embedding-004";
+import { embedTexts } from "./local-embeddings.js";
+import { extractSummary } from "./extractive-summary.js";
 
 interface RawMessage {
   role: string;
   content: string;
-}
-
-const SYSTEM_PROMPT = `You are a conversation analyst for an AI memory system.
-Given a chat conversation, extract structured information.
-Respond with valid JSON only, no markdown fences:
-{
-  "summary": "2-3 sentences describing what was discussed",
-  "keyPoints": ["decisions or conclusions reached"],
-  "openQuestions": ["unresolved questions"],
-  "topics": ["3-7 specific topic tags, lowercase"]
-}`;
-
-// ── Gemini API calls ─────────────────────────────────────────────────────────
-
-async function callGemini(prompt: string): Promise<string> {
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${__GEMINI_API_KEY__}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.2, maxOutputTokens: 1024, responseMimeType: "application/json" },
-      }),
-    }
-  );
-
-  if (!res.ok) {
-    console.error("Gemini error:", res.status);
-    return "{}";
-  }
-
-  const data = await res.json();
-  return data.candidates?.[0]?.content?.parts?.[0]?.text ?? "{}";
-}
-
-async function embedTexts(texts: string[]): Promise<Array<number[]>> {
-  if (texts.length === 0) return [];
-
-  const results: Array<number[]> = [];
-  const BATCH = 100;
-
-  for (let i = 0; i < texts.length; i += BATCH) {
-    const batch = texts.slice(i, i + BATCH);
-
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${EMBED_MODEL}:batchEmbedContents?key=${__GEMINI_API_KEY__}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          requests: batch.map((text) => ({
-            model: `models/${EMBED_MODEL}`,
-            content: { parts: [{ text }] },
-          })),
-        }),
-      }
-    );
-
-    if (!res.ok) {
-      console.error("Embed error:", res.status);
-      results.push(...batch.map(() => []));
-      continue;
-    }
-
-    const data = await res.json();
-    const embeddings = data.embeddings as Array<{ values: number[] }> | undefined;
-    if (embeddings) {
-      results.push(...embeddings.map((e) => e.values ?? []));
-    } else {
-      results.push(...batch.map(() => []));
-    }
-  }
-
-  return results;
 }
 
 // ── Chunking ─────────────────────────────────────────────────────────────────
@@ -134,23 +55,16 @@ export async function processConversation(
   const db = getDb();
 
   try {
-    // Step 1: Summarize
-    const msgText = rawMessages
-      .slice(0, 30)
-      .map((m) => `${m.role === "user" ? "User" : "Assistant"}: ${m.content.slice(0, 500)}`)
-      .join("\n\n");
-
-    const aiText = await callGemini(`Analyze this conversation:\n\n${msgText}`);
-    let parsed: Record<string, unknown> = {};
-    try { parsed = JSON.parse(aiText); } catch { /* use empty */ }
+    // Step 1: Summarize (HF API with local fallback)
+    const parsed = await extractSummary(rawMessages.slice(0, 30));
 
     // Step 2: Update conversation in Firestore
     const convRef = doc(db, "conversations", conversationId);
     await updateDoc(convRef, {
-      summary: parsed.summary ?? null,
-      keyPoints: parsed.keyPoints ?? null,
-      openQuestions: parsed.openQuestions ?? null,
-      topics: parsed.topics ?? null,
+      summary: parsed.summary || null,
+      keyPoints: parsed.keyPoints.length ? parsed.keyPoints : null,
+      openQuestions: parsed.openQuestions.length ? parsed.openQuestions : null,
+      topics: parsed.topics.length ? parsed.topics : null,
       processedAt: Timestamp.now(),
     });
 

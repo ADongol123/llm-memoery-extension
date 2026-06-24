@@ -1,6 +1,6 @@
-import { initializeApp, getApps } from "firebase/app";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut as fbSignOut } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { initializeApp, getApps, type FirebaseApp } from "firebase/app";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut as fbSignOut, type Auth } from "firebase/auth";
+import { getFirestore, type Firestore } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -11,9 +11,26 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-export const auth = getAuth(app);
-export const db = getFirestore(app);
+function getApp(): FirebaseApp {
+  return getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+}
+
+let _auth: Auth | undefined;
+let _db: Firestore | undefined;
+
+export const auth: Auth = new Proxy({} as Auth, {
+  get(_, prop) {
+    if (!_auth) _auth = getAuth(getApp());
+    return (_auth as any)[prop];
+  },
+});
+
+export const db: Firestore = new Proxy({} as Firestore, {
+  get(_, prop) {
+    if (!_db) _db = getFirestore(getApp());
+    return (_db as any)[prop];
+  },
+});
 
 export async function signInWithGoogle() {
   const provider = new GoogleAuthProvider();

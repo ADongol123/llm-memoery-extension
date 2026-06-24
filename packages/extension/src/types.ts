@@ -1,5 +1,5 @@
 // Re-export all shared types and utilities for use within the extension.
-// Webpack resolves @llm-memory/shared to packages/shared/src/index.ts
+// Webpack resolves @stash/shared to packages/shared/src/index.ts
 
 export type {
   Platform,
@@ -22,6 +22,6 @@ export type {
   TransferSession,
   ExtensionMessage,
   ExtensionSettings,
-} from "@llm-memory/shared";
+} from "@stash/shared";
 
-export { DEFAULT_SETTINGS, ALL_PLATFORMS, buildBriefing, buildMergedBriefing, buildPackageBriefing, makeTitle, trimMessages } from "@llm-memory/shared";
+export { DEFAULT_SETTINGS, ALL_PLATFORMS, buildBriefing, buildMergedBriefing, buildPackageBriefing, makeTitle, trimMessages } from "@stash/shared";

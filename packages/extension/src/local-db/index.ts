@@ -7,7 +7,7 @@ import type { Conversation, ContextPackage, ExtensionSettings, SelectorRegistry 
 import { DEFAULT_SETTINGS, ALL_PLATFORMS } from "../types.js";
 
 const DB_NAME    = "llm-memory";
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 export interface LocalChunk {
   id: string;
@@ -61,7 +61,7 @@ async function getDB(): Promise<IDBPDatabase<LLMMemoryDB>> {
   if (_db) return _db;
 
   _db = await openDB<LLMMemoryDB>(DB_NAME, DB_VERSION, {
-    upgrade(db, oldVersion) {
+    upgrade(db, oldVersion, _newVersion, transaction) {
       if (oldVersion < 1) {
         const convStore = db.createObjectStore("conversations", { keyPath: "id" });
         convStore.createIndex("by-platform",   "platform");
@@ -74,6 +74,10 @@ async function getDB(): Promise<IDBPDatabase<LLMMemoryDB>> {
       if (oldVersion < 2) {
         const chunkStore = db.createObjectStore("chunks", { keyPath: "id" });
         chunkStore.createIndex("by-conversation", "conversationId");
+      }
+      if (oldVersion === 2) {
+        // Clear old 768-dim Gemini embeddings — new local model uses 384-dim
+        transaction.objectStore("chunks").clear();
       }
     },
   });

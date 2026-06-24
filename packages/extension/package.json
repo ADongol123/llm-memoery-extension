@@ -1,5 +1,5 @@
 {
-  "name": "@llm-memory/extension",
+  "name": "@stash/extension",
   "version": "1.0.0",
   "private": true,
   "scripts": {
@@ -8,6 +8,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@huggingface/transformers": "^4.2.0",
     "firebase": "^12.15.0",
     "idb": "^8.0.0"
   },
@@ -15,6 +16,7 @@
     "@types/chrome": "^0.0.268",
     "copy-webpack-plugin": "^14.0.0",
     "dotenv": "^17.4.2",
+    "ignore-loader": "^0.1.2",
     "ts-loader": "^9.5.1",
     "typescript": "^5.4.0",
     "webpack": "^5.91.0",

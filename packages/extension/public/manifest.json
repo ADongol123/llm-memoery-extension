@@ -30,7 +30,11 @@
     "https://meta.ai/*",
     "https://www.meta.ai/*",
     "https://poe.com/*",
-    "https://*.supabase.co/*"
+    "https://*.supabase.co/*",
+    "https://huggingface.co/*",
+    "https://api-inference.huggingface.co/*",
+    "https://cdn-lfs.huggingface.co/*",
+    "https://cdn-lfs-us-1.huggingface.co/*"
   ],
 
   "background": {

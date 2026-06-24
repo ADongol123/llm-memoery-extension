@@ -36,8 +36,13 @@ module.exports = (env, argv) => ({
         use:  "ts-loader",
         exclude: /node_modules/,
       },
+      {
+        test: /\.wasm$/,
+        loader: "ignore-loader",
+      },
     ],
   },
+
 
   plugins: [
     new CopyPlugin({
@@ -59,7 +64,7 @@ module.exports = (env, argv) => ({
       __FIREBASE_MESSAGING_SENDER_ID__:  JSON.stringify(process.env.FIREBASE_MESSAGING_SENDER_ID ?? ""),
       __FIREBASE_APP_ID__:               JSON.stringify(process.env.FIREBASE_APP_ID ?? ""),
       __GOOGLE_CLIENT_ID__:              JSON.stringify(process.env.GOOGLE_CLIENT_ID ?? ""),
-      __GEMINI_API_KEY__:                JSON.stringify(process.env.GEMINI_API_KEY ?? ""),
+      __HF_API_TOKEN__:                  JSON.stringify(process.env.HF_API_TOKEN ?? ""),
     }),
   ],
 
