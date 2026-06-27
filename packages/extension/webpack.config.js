@@ -25,7 +25,7 @@ module.exports = (env, argv) => ({
       ".js": [".ts", ".js"],
     },
     alias: {
-      "@llm-memory/shared": require("path").resolve(__dirname, "../../packages/shared/src/index.ts"),
+      "@stash/shared": require("path").resolve(__dirname, "../../packages/shared/src/index.ts"),
     },
   },
 

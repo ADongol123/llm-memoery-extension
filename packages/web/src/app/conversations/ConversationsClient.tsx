@@ -76,7 +76,7 @@ export default function ConversationsClient({ conversations }: Props) {
         <div style={{ padding: "0 20px 28px", borderBottom: "1px solid #1a1a1a" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{ fontSize: 18, color: "#d97706" }}>⬡</span>
-            <span style={{ fontWeight: 700, fontSize: 14, letterSpacing: "-0.02em", color: "#f5f5f5" }}>LLM Memory</span>
+            <span style={{ fontWeight: 700, fontSize: 14, letterSpacing: "-0.02em", color: "#f5f5f5" }}>Stash</span>
           </div>
         </div>
 

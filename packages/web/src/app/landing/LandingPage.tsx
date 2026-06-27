@@ -35,7 +35,7 @@ const FEATURES = [
   },
   {
     title: "Smart Context Injection",
-    description: "When you start a new conversation, LLM Memory offers to inject relevant context from your past chats directly into the input field. The AI gets your full background instantly.",
+    description: "When you start a new conversation, Stash offers to inject relevant context from your past chats directly into the input field. The AI gets your full background instantly.",
     details: ["One-click inject", "Auto-detected context", "Direct input injection", "Clipboard fallback"],
     icon: "💡",
     color: "#06b6d4",
@@ -166,8 +166,8 @@ function PlatformOrbit() {
         animation: visible ? "pulseGlow 3s ease-in-out infinite" : "none",
         zIndex: 2,
       }}>
-        <span style={{ fontSize: 13, fontWeight: 700, color: "#a78bfa", textAlign: "center", lineHeight: 1.2 }}>
-          LLM<br />Memory
+        <span style={{ fontSize: 16, fontWeight: 800, color: "#a78bfa", textAlign: "center", letterSpacing: "-0.03em" }}>
+          Stash
         </span>
       </div>
 
@@ -302,6 +302,38 @@ export default function LandingPage() {
   return (
     <div style={{ minHeight: "100vh", overflow: "hidden" }} onMouseMove={handleMouseMove}>
 
+      {/* ── NAVBAR ── */}
+      <nav style={{
+        position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
+        padding: "16px 32px",
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        background: scrollY > 50 ? "rgba(10,10,10,0.85)" : "transparent",
+        backdropFilter: scrollY > 50 ? "blur(20px) saturate(180%)" : "none",
+        WebkitBackdropFilter: scrollY > 50 ? "blur(20px) saturate(180%)" : "none",
+        borderBottom: scrollY > 50 ? "1px solid rgba(255,255,255,0.06)" : "1px solid transparent",
+        transition: "all 0.4s ease",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{
+            width: 32, height: 32, borderRadius: 10,
+            background: "linear-gradient(135deg, #7c3aed, #06b6d4)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 14, fontWeight: 800, color: "#fff",
+          }}>S</div>
+          <span style={{ fontSize: 18, fontWeight: 700, color: "#f5f5f5", letterSpacing: "-0.03em" }}>Stash</span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
+          <a href="#features" style={{ fontSize: 14, color: "#9ca3af", textDecoration: "none" }}>Features</a>
+          <a href="/auth" style={{
+            fontSize: 13, color: "#a78bfa", textDecoration: "none",
+            padding: "8px 18px", borderRadius: 8,
+            border: "1px solid rgba(124,58,237,0.3)",
+            background: "rgba(124,58,237,0.08)",
+            fontWeight: 500,
+          }}>Sign In</a>
+        </div>
+      </nav>
+
       {/* Cursor glow */}
       <div style={{
         position: "fixed",
@@ -349,23 +381,31 @@ export default function LandingPage() {
             </div>
 
             <h1 style={{
-              fontSize: "clamp(36px, 5vw, 60px)", fontWeight: 700, lineHeight: 1.1, margin: "0 0 24px",
+              fontSize: "clamp(36px, 5vw, 64px)", fontWeight: 800, lineHeight: 1.05, margin: "0 0 24px",
+              letterSpacing: "-0.03em",
               animation: mounted ? "fadeInUp 0.8s ease-out 0.5s both" : "none",
             }}>
               <span style={{
-                background: "linear-gradient(135deg, #fff 0%, #e2e8f0 100%)",
+                background: "linear-gradient(135deg, #fff 0%, #d1d5db 100%)",
                 WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
               }}>
-                Your AI Conversations,{" "}
+                Never Lose an{" "}
               </span>
               <br />
               <span style={{
-                background: "linear-gradient(135deg, #7c3aed, #06b6d4)",
+                background: "linear-gradient(135deg, #7c3aed, #06b6d4, #7c3aed)",
                 WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
                 animation: "gradientShift 4s ease infinite",
-                backgroundSize: "200% 200%",
+                backgroundSize: "300% 300%",
               }}>
-                Unified
+                AI Conversation
+              </span>
+              <br />
+              <span style={{
+                background: "linear-gradient(135deg, #fff 0%, #d1d5db 100%)",
+                WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
+              }}>
+                Again.
               </span>
             </h1>
 
@@ -374,7 +414,7 @@ export default function LandingPage() {
               margin: "0 0 32px", maxWidth: 500,
               animation: mounted ? "fadeInUp 0.8s ease-out 0.7s both" : "none",
             }}>
-              LLM Memory captures every conversation across Claude, ChatGPT, Gemini, and more &mdash;
+              Stash captures every conversation across Claude, ChatGPT, Gemini, and more &mdash;
               then gives you the power to bring that context into any new chat.
             </p>
 
@@ -391,24 +431,29 @@ export default function LandingPage() {
             </div>
 
             <div style={{
-              display: "flex", gap: 16, flexWrap: "wrap",
+              display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center",
               animation: mounted ? "fadeInUp 0.8s ease-out 1.1s both" : "none",
             }}>
-              <a href="https://chromewebstore.google.com" target="_blank" rel="noopener noreferrer"
-                className="cta-primary"
-                style={{
-                  padding: "14px 32px", borderRadius: 12,
-                  background: "linear-gradient(135deg, #7c3aed, #6d28d9)",
-                  color: "#fff", fontSize: 16, fontWeight: 600, textDecoration: "none",
-                  boxShadow: "0 0 30px rgba(124,58,237,0.3), inset 0 1px 0 rgba(255,255,255,0.1)",
-                  position: "relative", overflow: "hidden",
+              <div className="coming-soon-btn" style={{
+                position: "relative", borderRadius: 14, padding: 1,
+                background: "linear-gradient(135deg, #7c3aed, #06b6d4, #7c3aed)",
+                backgroundSize: "200% 200%",
+                animation: "gradientShift 3s ease infinite",
+              }}>
+                <span style={{
+                  display: "inline-block",
+                  padding: "13px 32px", borderRadius: 13,
+                  background: "rgba(10,10,10,0.9)",
+                  color: "#a78bfa", fontSize: 16, fontWeight: 600,
+                  cursor: "default", letterSpacing: "-0.01em",
                 }}>
-                <span style={{ position: "relative", zIndex: 1 }}>Install Extension</span>
-              </a>
+                  Coming Soon
+                </span>
+              </div>
               <a href="#features" style={{
-                padding: "14px 32px", borderRadius: 12,
-                background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)",
-                color: "#e5e7eb", fontSize: 16, fontWeight: 500, textDecoration: "none",
+                padding: "14px 32px", borderRadius: 14,
+                background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
+                color: "#d1d5db", fontSize: 16, fontWeight: 500, textDecoration: "none",
               }}>
                 Learn More
               </a>
@@ -452,7 +497,7 @@ export default function LandingPage() {
 
               <img
                 src="/extension-preview.png"
-                alt="LLM Memory Extension"
+                alt="Stash Extension"
                 style={{
                   display: "block", width: "100%", height: "auto",
                   opacity: 0.85,
@@ -606,11 +651,19 @@ export default function LandingPage() {
 
       {/* Footer */}
       <footer style={{
-        padding: "40px 24px", textAlign: "center",
+        padding: "48px 24px", textAlign: "center",
         borderTop: "1px solid rgba(255,255,255,0.05)",
-        color: "#6b7280", fontSize: 14,
       }}>
-        <p style={{ margin: 0 }}>LLM Memory &mdash; Your conversations, your context, your control.</p>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 12 }}>
+          <div style={{
+            width: 24, height: 24, borderRadius: 7,
+            background: "linear-gradient(135deg, #7c3aed, #06b6d4)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 11, fontWeight: 800, color: "#fff",
+          }}>S</div>
+          <span style={{ fontSize: 15, fontWeight: 700, color: "#e5e7eb", letterSpacing: "-0.02em" }}>Stash</span>
+        </div>
+        <p style={{ margin: 0, color: "#4b5563", fontSize: 13 }}>Your conversations, your context, your control.</p>
       </footer>
 
       {/* ── GLOBAL CSS ── */}
@@ -689,11 +742,19 @@ export default function LandingPage() {
           100% { background-position:-200% 0 }
         }
 
+        nav a:not([style*="border"]):hover { color: #e5e7eb !important; }
+
+        .coming-soon-btn:hover span {
+          background: rgba(10,10,10,0.7) !important;
+          color: #c4b5fd !important;
+        }
+
         @media (max-width: 768px) {
           .hero-grid { grid-template-columns: 1fr !important; text-align: center; }
           .feature-row { grid-template-columns: 1fr !important; gap: 32px !important; }
           .feature-row > * { order: 0 !important; }
           .cta-inner { grid-template-columns: 1fr !important; }
+          nav { padding: 12px 16px !important; }
         }
       `}</style>
     </div>
@@ -1082,7 +1143,7 @@ function FeatureShowcaseRow({ feature, index }: { feature: typeof FEATURES[numbe
 }
 
 const CTA_TERMINAL_LINES: { text: string; color: string; prefix?: string; delay: number }[] = [
-  { text: "llm-memory install", prefix: "$ ", color: "#9ca3af", delay: 0 },
+  { text: "stash install", prefix: "$ ", color: "#9ca3af", delay: 0 },
   { text: "✓ Extension loaded — watching 10 platforms", color: "#22c55e", delay: 0.4 },
   { text: "", color: "", delay: 0.6 },
   { text: "# You chat normally on any AI platform...", color: "#6b7280", delay: 0.8 },
@@ -1091,7 +1152,7 @@ const CTA_TERMINAL_LINES: { text: string; color: string; prefix?: string; delay:
   { text: "capturing gemini.google.com/app/perf-audit     ███░░░░░  5 msgs", color: "#6366f1", delay: 2.0 },
   { text: "", color: "", delay: 2.2 },
   { text: "# Start a new conversation — inject your context", color: "#6b7280", delay: 2.4 },
-  { text: "llm-memory inject --intent=\"optimize bundle size\"", prefix: "$ ", color: "#9ca3af", delay: 2.8 },
+  { text: "stash inject --intent=\"optimize bundle size\"", prefix: "$ ", color: "#9ca3af", delay: 2.8 },
   { text: "⟳ Searching 25 conversations with Voyage AI embeddings...", color: "#06b6d4", delay: 3.2 },
   { text: "✓ Found 3 relevant chunks (scores: 0.94, 0.87, 0.81)", color: "#22c55e", delay: 3.6 },
   { text: "✓ Context injected — AI now has your full background", color: "#22c55e", delay: 4.0 },
@@ -1169,7 +1230,7 @@ function CtaSection() {
               marginLeft: 12, fontSize: 12, color: "#6b7280",
               fontFamily: "'SF Mono', 'Fira Code', Consolas, monospace",
             }}>
-              llm-memory — zsh — 80×24
+              stash — zsh — 80×24
             </span>
             <div style={{ marginLeft: "auto", display: "flex", gap: 16 }}>
               {["⌘K", "⌘T", "⌘W"].map(k => (
@@ -1296,31 +1357,19 @@ function CtaSection() {
                   opacity: btnHovered ? 0.8 : 0,
                   transition: "opacity 0.4s",
                 }} />
-                <a href="https://chromewebstore.google.com" target="_blank" rel="noopener noreferrer"
-                  className="cta-primary"
+                <span
                   style={{
                     display: "inline-flex", alignItems: "center", gap: 10,
                     padding: "14px 28px", borderRadius: 10,
-                    background: btnHovered ? "#7c3aed" : "transparent",
-                    border: "1px solid #7c3aed",
-                    color: btnHovered ? "#fff" : "#a78bfa",
+                    background: "transparent",
+                    border: "1px solid rgba(124,58,237,0.4)",
+                    color: "rgba(167,139,250,0.6)",
                     fontSize: 15, fontWeight: 600,
                     fontFamily: "'SF Mono', 'Fira Code', Consolas, monospace",
-                    textDecoration: "none",
-                    position: "relative", overflow: "hidden",
-                    transform: btnHovered ? "translateY(-2px)" : "translateY(0)",
-                    transition: "all 0.3s cubic-bezier(0.16,1,0.3,1)",
-                    boxShadow: btnHovered ? "0 4px 20px rgba(124,58,237,0.3)" : "none",
+                    position: "relative", overflow: "hidden", cursor: "default",
                   }}>
-                  <span style={{ position: "relative", zIndex: 1 }}>chrome.install()</span>
-                  <svg style={{
-                    position: "relative", zIndex: 1,
-                    transition: "transform 0.3s",
-                    transform: btnHovered ? "translateX(3px)" : "translateX(0)",
-                  }} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M5 12h14M12 5l7 7-7 7" />
-                  </svg>
-                </a>
+                  <span style={{ position: "relative", zIndex: 1 }}>coming_soon()</span>
+                </span>
               </div>
 
               {/* Keyboard hint */}

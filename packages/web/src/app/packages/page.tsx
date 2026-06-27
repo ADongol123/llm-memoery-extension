@@ -68,7 +68,7 @@ export default function PackagesPage() {
       <nav style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 32 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{ fontSize: 24, color: "#6366f1" }}>⬡</span>
-          <span style={{ fontWeight: 700, fontSize: 18 }}>LLM Memory</span>
+          <span style={{ fontWeight: 700, fontSize: 18 }}>Stash</span>
         </div>
         <div style={{ display: "flex", gap: 16, fontSize: 13 }}>
           <a href="/conversations" style={{ color: "#666",    textDecoration: "none" }}>Conversations</a>

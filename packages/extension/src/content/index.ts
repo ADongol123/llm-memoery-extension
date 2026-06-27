@@ -21,9 +21,9 @@ import type { SelectorRegistry, Conversation } from "../types.js";
 
 const adapter = getAdapter();
 if (!adapter) {
-  throw new Error("[LLM Memory] Not an LLM page, content script idle.");
+  throw new Error("[Stash] Not an LLM page, content script idle.");
 }
-console.debug(`[LLM Memory] Adapter loaded: ${adapter.platform} on ${location.hostname}`);
+console.debug(`[Stash] Adapter loaded: ${adapter.platform} on ${location.hostname}`);
 
 function dumpDomDiagnostics(): void {
   const selectors: Record<string, string> = {
@@ -89,7 +89,7 @@ function dumpDomDiagnostics(): void {
     });
   });
 
-  console.group(`[LLM Memory] DOM diagnostics for ${adapter!.platform}`);
+  console.group(`[Stash] DOM diagnostics for ${adapter!.platform}`);
   console.log('Matching selectors:\n' + (results.length ? results.join('\n') : '  (none matched)'));
   console.log('Message-related data attributes:', [...dataAttrs].slice(0, 40));
   console.log('Message-related CSS classes:', [...msgClasses].slice(0, 40));
@@ -115,10 +115,10 @@ async function init(): Promise<void> {
           const selectors = registry[adapter!.platform] ?? undefined;
           const messages = adapter!.extractConversation(selectors);
           if (messages.length < 2) {
-            console.warn(`[LLM Memory] ${adapter!.platform}: only extracted ${messages.length} messages — running DOM diagnostics`);
+            console.warn(`[Stash] ${adapter!.platform}: only extracted ${messages.length} messages — running DOM diagnostics`);
             dumpDomDiagnostics();
           } else {
-            console.debug(`[LLM Memory] ${adapter!.platform}: extracted ${messages.length} messages ✓`);
+            console.debug(`[Stash] ${adapter!.platform}: extracted ${messages.length} messages ✓`);
           }
         }, 5000);
       } else {

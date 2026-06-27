@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "LLM Memory",
+  "name": "Stash",
   "version": "3.0.0",
   "description": "Your conversations across Claude, ChatGPT, Grok, Gemini and DeepSeek — in one place.",
   "permissions": ["storage", "tabs", "scripting", "webNavigation"],
@@ -19,7 +19,7 @@
   },
   "action": {
     "default_popup": "popup.html",
-    "default_title": "LLM Memory"
+    "default_title": "Stash"
   },
   "commands": {
     "save-memory": {

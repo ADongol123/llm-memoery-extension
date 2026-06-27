@@ -24,7 +24,7 @@ export default function AuthPage() {
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>
       <div style={{ width: 360, padding: "40px 32px", background: "#111", border: "1px solid #222", borderRadius: 16 }}>
         <div style={{ fontSize: 32, textAlign: "center", marginBottom: 8 }}>⬡</div>
-        <h1 style={{ fontSize: 20, fontWeight: 700, textAlign: "center", marginBottom: 6 }}>LLM Memory</h1>
+        <h1 style={{ fontSize: 20, fontWeight: 700, textAlign: "center", marginBottom: 6 }}>Stash</h1>
         <p style={{ fontSize: 13, color: "#666", textAlign: "center", marginBottom: 28 }}>
           Sign in to sync conversations across devices
         </p>

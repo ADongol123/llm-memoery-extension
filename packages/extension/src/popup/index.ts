@@ -383,7 +383,7 @@ function renderEmpty(): void {
       <div class="onboarding-card">
         <div class="onboarding-header">
           <div style="font-size:24px;">⬡</div>
-          <div style="font-weight:700;font-size:14px;">Welcome to LLM Memory</div>
+          <div style="font-weight:700;font-size:14px;">Welcome to Stash</div>
           <div class="empty-hint">Your conversations, reusable across any AI</div>
         </div>
         <div class="onboarding-steps">

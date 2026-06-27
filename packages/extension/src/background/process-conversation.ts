@@ -162,9 +162,9 @@ export async function processConversation(
       await batch.commit();
     }
 
-    console.log(`[LLM Memory] Processed conversation ${conversationId}: ${pending.length} chunks`);
+    console.log(`[Stash] Processed conversation ${conversationId}: ${pending.length} chunks`);
   } catch (e) {
-    console.error("[LLM Memory] processConversation error:", e);
+    console.error("[Stash] processConversation error:", e);
   }
 }
 

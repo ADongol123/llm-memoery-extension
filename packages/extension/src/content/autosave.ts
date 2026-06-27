@@ -100,7 +100,7 @@ export function startAutosave(
     try {
       tick(adapter, registry);
     } catch (e) {
-      console.warn("[LLM Memory] Autosave error:", e);
+      console.warn("[Stash] Autosave error:", e);
       stopAutosave();
     }
   }, INTERVAL_MS);
@@ -119,7 +119,7 @@ function tick(adapter: PlatformAdapter, registry: SelectorRegistry): void {
   const selectors = registry[adapter.platform] ?? undefined;
   const messages  = adapter.extractConversation(selectors);
 
-  console.debug(`[LLM Memory] ${adapter.platform}: extracted ${messages.length} messages`);
+  console.debug(`[Stash] ${adapter.platform}: extracted ${messages.length} messages`);
 
   if (messages.length < MIN_MESSAGES) return;
 

@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "LLM Memory",
+  "name": "Stash",
   "version": "4.0.0",
   "description": "Your conversations across Claude, ChatGPT, Gemini, Grok, DeepSeek, Perplexity, Copilot, Mistral, Meta AI and Poe — in one place. Inject relevant context into any new chat.",
 
@@ -50,7 +50,7 @@
 
   "action": {
     "default_popup": "popup.html",
-    "default_title": "LLM Memory",
+    "default_title": "Stash",
     "default_icon": {
       "16":  "icon16.png",
       "48":  "icon48.png",
@@ -71,7 +71,7 @@
         "default": "Ctrl+Shift+L",
         "mac": "Command+Shift+L"
       },
-      "description": "Open LLM Memory"
+      "description": "Open Stash"
     }
   },
 

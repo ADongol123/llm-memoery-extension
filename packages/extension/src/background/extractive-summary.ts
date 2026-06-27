@@ -50,7 +50,7 @@ async function hfSummarize(
     );
 
     if (!res.ok) {
-      console.warn("[LLM Memory] HF API error:", res.status);
+      console.warn("[Stash] HF API error:", res.status);
       return null;
     }
 
@@ -66,7 +66,7 @@ async function hfSummarize(
       topics: parsed.topics ?? [],
     };
   } catch (e) {
-    console.warn("[LLM Memory] HF summarization failed, using local fallback:", e);
+    console.warn("[Stash] HF summarization failed, using local fallback:", e);
     return null;
   }
 }

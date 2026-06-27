@@ -226,9 +226,9 @@ function interceptSend(
     if (ragInjected) {
       // Show green confirmation badge so user knows RAG ran
       showRagBadge();
-      console.log("[LLM Memory] RAG context injected for message:", userMessage.slice(0, 60));
+      console.log("[Stash] RAG context injected for message:", userMessage.slice(0, 60));
     } else {
-      console.log("[LLM Memory] RAG fetch returned no context — sent without augmentation");
+      console.log("[Stash] RAG fetch returned no context — sent without augmentation");
     }
   };
 

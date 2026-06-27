@@ -33,7 +33,7 @@ function showContextBadge(text: string): void {
   ).length;
   const label = lineCount > 0
     ? `${lineCount} messages loaded as context`
-    : "Context loaded from LLM Memory";
+    : "Context loaded from Stash";
 
   const badge = document.createElement("div");
   badge.id = CONTEXT_BADGE_ID;
@@ -64,7 +64,7 @@ function showContextBadge(text: string): void {
 
   badge.innerHTML = `
     <span style="font-size:14px;">⬡</span>
-    <span>LLM Memory: ${label}</span>
+    <span>Stash: ${label}</span>
     <span style="opacity:0.7;font-size:11px;">· Press Enter to send</span>
   `;
 
@@ -121,7 +121,7 @@ export function showRagBadge(): void {
     whiteSpace:    "nowrap",
   });
 
-  badge.innerHTML = `<span style="font-size:14px;">⬡</span><span>LLM Memory: RAG context injected ✦</span>`;
+  badge.innerHTML = `<span style="font-size:14px;">⬡</span><span>Stash: RAG context injected ✦</span>`;
   document.body.appendChild(badge);
 
   requestAnimationFrame(() => {

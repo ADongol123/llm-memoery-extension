@@ -30,7 +30,7 @@ export function createStatusIndicator(): void {
     userSelect:   "none",
   });
 
-  pill.innerHTML = `<span style="width:5px;height:5px;border-radius:50%;background:#6366f1;flex-shrink:0;"></span><span id="llm-status-text">LLM Memory · Active</span>`;
+  pill.innerHTML = `<span style="width:5px;height:5px;border-radius:50%;background:#6366f1;flex-shrink:0;"></span><span id="llm-status-text">Stash · Active</span>`;
   document.body.appendChild(pill);
   pillEl = pill;
 }
@@ -48,7 +48,7 @@ export function updateStatus(state: "active" | "saving" | "saved" | "hidden"): v
 
   switch (state) {
     case "active":
-      textEl.textContent = "LLM Memory · Active";
+      textEl.textContent = "Stash · Active";
       dotEl.style.background = "#6366f1";
       pillEl.style.opacity = "0.35";
       pillEl.style.display = "flex";

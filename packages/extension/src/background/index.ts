@@ -10,7 +10,7 @@ import { updateBadge }              from "./badge.js";
 // ── Startup ────────────────────────────────────────────────────────────────────
 
 chrome.runtime.onInstalled.addListener(async () => {
-  console.log("[LLM Memory] Installed — initialising");
+  console.log("[Stash] Installed — initialising");
   await refreshSelectorRegistry();
   setupAlarms();
   updateBadge();
